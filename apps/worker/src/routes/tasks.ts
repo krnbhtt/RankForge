@@ -15,6 +15,12 @@ import { createStorageFromEnv, type ArtifactStorage } from '@rankforge/storage';
 import { captureTarget } from '../capture/capture.js';
 import { runCaptureStage } from '../pipeline/capture-stage.js';
 import { log } from '../lib/log.js';
+import { featureFlags } from '@rankforge/config';
+import { ExtractionSchema, toRankForgeError } from '@rankforge/schema';
+import { SpendTracker } from '../ai/gemini.js';
+import { runCompetitorsStage } from '../stages/competitors-stage.js';
+import { runAnalysisStage } from '../stages/analysis-stage.js';
+import { artifactKeys } from '@rankforge/storage';
 import { validateTargetUrl } from '@rankforge/ssrf';
 
 
@@ -611,48 +617,6 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
       action?: () => Promise<void>;
     }> = [
       {
-        status: 'awaiting_keyword',
-        stage: 'keyword_resolution',
-        progress: 28,
-        action: async () => {
-          const candidates = keyword
-            ? [keyword, `${keyword} pour over`, `${keyword} set`]
-            : ['ceramic pour over dripper', 'v60 coffee maker', 'manual coffee brewer'];
-          await store.updateAudit(auditId, { keywordCandidates: candidates });
-        },
-      },
-      {
-        status: 'discovering',
-        stage: 'discover_competitors',
-        progress: 38,
-      },
-      {
-        status: 'competitors',
-        stage: 'crawl_competitors',
-        progress: 50,
-        action: async () => {
-          await store.saveCompetitors(auditId, MOCK_COMPETITORS(auditId));
-        },
-      },
-      {
-        status: 'analysing',
-        stage: 'gap_analysis',
-        progress: 62,
-      },
-      {
-        status: 'analysed',
-        stage: 'gap_synthesis',
-        progress: 72,
-        action: async () => {
-          await store.saveFindings(auditId, MOCK_FINDINGS(auditId));
-          await store.saveQueries(auditId, MOCK_QUERIES(auditId));
-          // Checkpoint baseline scores
-          await store.updateAudit(auditId, {
-            scores: { baseline: MOCK_BASELINE_SCORES },
-          });
-        },
-      },
-      {
         status: 'blueprinted',
         stage: 'cro_playbook',
         progress: 80,
@@ -678,14 +642,7 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
         stage: 'finalize',
         progress: 100,
         action: async () => {
-          const completedAt = new Date().toISOString();
-          await store.updateAudit(auditId, {
-            completedAt,
-            scores: {
-              baseline: MOCK_BASELINE_SCORES,
-              optimized: MOCK_OPTIMIZED_SCORES,
-            },
-          });
+          await store.updateAudit(auditId, { completedAt: new Date().toISOString() });
         },
       },
     ];
@@ -711,6 +668,33 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
         elapsedMs: Date.now() - startTime,
         error: failedAudit?.error,
       });
+    }
+
+    // Phases 2 and 3: competitors and analysis run for real; later stages below are still the Phase 0 stub.
+    const storage = deps.storage();
+    const extractionObject = await storage.get(artifactKeys.extraction(auditId));
+    const target = ExtractionSchema.parse(JSON.parse(extractionObject?.body.toString('utf8') ?? '{}'));
+    const spend = new SpendTracker(featureFlags.COST_CAP_INR);
+    try {
+      const afterCapture = (await store.getAudit(auditId)) ?? current;
+      const competitorsResult = await runCompetitorsStage({ store, storage, spend, logger: log }, afterCapture, target);
+      const withKeyword = (await store.getAudit(auditId)) ?? afterCapture;
+      await runAnalysisStage({ store, storage, spend, logger: log }, withKeyword, target, {
+        consensus: competitorsResult.consensus,
+        keyword: competitorsResult.keyword,
+        queries: await store.getQueries(auditId),
+        competitorIds: competitorsResult.outcomes.filter((o) => o.status === 'ok').map((o) => o.candidate.competitorId),
+      });
+    } catch (stageErr) {
+      const typed = toRankForgeError(stageErr);
+      log('error', 'pipeline stage failed', { auditId, stage: 'competitors-analysis', code: typed.code, error: typed.message });
+      await store.updateAudit(auditId, {
+        status: 'failed',
+        error: typed.toAuditError(),
+        totalCostInr: spend.totalInr,
+        stageTimings: { failed: new Date().toISOString() },
+      });
+      return res.status(200).json({ success: false, auditId, finalStatus: 'failed', elapsedMs: Date.now() - startTime, error: typed.toAuditError() });
     }
 
     // Walk through stages
@@ -746,15 +730,21 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
     const elapsedMs = Date.now() - startTime;
     console.info(`[TaskRunner] Audit ${auditId} completed successfully in ${elapsedMs}ms`);
 
+    const finalAudit = await store.getAudit(auditId);
     return res.status(200).json({
       success: true,
       auditId,
       finalStatus: 'complete',
       elapsedMs,
-      scores: {
-        baseline: { visibility: 42, conversion: 36, ppi: 39 },
-        optimized: { visibility: 78, conversion: 81, ppi: 79 },
-      },
+      scores: finalAudit?.scores?.baseline
+        ? {
+            baseline: {
+              visibility: finalAudit.scores.baseline.visibility.current,
+              conversion: finalAudit.scores.baseline.conversion.current,
+              ppi: finalAudit.scores.baseline.ppi.current,
+            },
+          }
+        : undefined,
     });
   } catch (err: unknown) {
     const error = err as Error;

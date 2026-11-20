@@ -7,7 +7,7 @@ import {
 } from '@rankforge/schema';
 import { validateTargetUrl } from '@rankforge/ssrf';
 import type { ArtifactStorage } from '@rankforge/storage';
-import { AUTO_SCROLL_SCRIPT, NEUTRALISE_OVERLAYS_SCRIPT } from '../extract/layout-script.js';
+import { AUTO_SCROLL_SCRIPT, NEUTRALISE_OVERLAYS_SCRIPT, READ_VITALS_SCRIPT, VITALS_INIT_SCRIPT } from '../extract/layout-script.js';
 import { buildExtraction, collectLayout, type LayoutData } from '../extract/index.js';
 import { log as defaultLog, type Logger } from '../lib/log.js';
 import { AssetRecorder, buildSnapshot } from './assets.js';
@@ -82,6 +82,8 @@ interface RenderedPage {
   headers: Record<string, string>;
   layout: LayoutData;
   frameworkMarkers: Awaited<ReturnType<typeof detectFrameworkMarkers>>;
+  hiddenOverlays: number;
+  mobileVitals: { lcpMs: number; cls: number } | null;
   mobile: LayoutData | null;
   recorder: AssetRecorder;
   stats: NetworkStats;
@@ -134,6 +136,7 @@ async function openContext(
     urlPolicy: options.urlPolicy,
   });
   options.recorder.attach(context);
+  if (kind === 'mobile') await context.addInitScript(VITALS_INIT_SCRIPT);
   if (options.html !== undefined) {
     const body = options.html;
     await context.route(
@@ -150,7 +153,7 @@ async function loadAndInspect(
   timeoutMs: number,
   logger: Logger,
   policy: UrlPolicy
-): Promise<{ response: Response | null; html: string; finalUrl: string }> {
+): Promise<{ response: Response | null; html: string; finalUrl: string; hiddenOverlays: number }> {
   const response = await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
   await settle(page, logger, input.auditId);
   await page.evaluate(AUTO_SCROLL_SCRIPT);
@@ -174,7 +177,7 @@ async function loadAndInspect(
       'Use the public product page URL.'
     );
   }
-  return { response, html, finalUrl };
+  return { response, html, finalUrl, hiddenOverlays };
 }
 
 async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutMs: number): Promise<RenderedPage> {
@@ -206,10 +209,12 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
     const desktopPage = await desktop.context.newPage();
     const mobilePage = await mobile.context.newPage();
 
+    let mobileVitals: { lcpMs: number; cls: number } | null = null;
     const mobileTask = (async (): Promise<LayoutData | null> => {
       if (input.lite) return null;
       try {
         await loadAndInspect(mobilePage, input, timeoutMs, logger, policy);
+        mobileVitals = (await mobilePage.evaluate(READ_VITALS_SCRIPT)) as { lcpMs: number; cls: number } | null;
         const layout = await collectLayout(mobilePage);
         const clipHeight = Math.min(layout.pageHeight, MAX_SCREENSHOT_HEIGHT);
         const png = await mobilePage.screenshot({
@@ -229,7 +234,7 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
       }
     })();
 
-    const { response, html, finalUrl } = await loadAndInspect(desktopPage, input, timeoutMs, logger, policy);
+    const { response, html, finalUrl, hiddenOverlays } = await loadAndInspect(desktopPage, input, timeoutMs, logger, policy);
     const layout = await collectLayout(desktopPage);
     const frameworkMarkers = await detectFrameworkMarkers(desktopPage);
     const clipHeight = Math.min(layout.pageHeight, MAX_SCREENSHOT_HEIGHT);
@@ -250,6 +255,8 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
       headers: response?.headers() ?? {},
       layout,
       frameworkMarkers,
+      hiddenOverlays,
+      mobileVitals,
       mobile: mobileLayout,
       recorder,
       stats: {
@@ -363,6 +370,13 @@ export async function captureTarget(input: CaptureInput): Promise<CaptureOutput>
     cssTexts,
     mobile: rendered.mobile,
     desktop: rendered.layout,
+    pageSignals: {
+      heroPreloaded: /<link[^>]+rel=["']preload["'][^>]*as=["']image["']|<link[^>]+as=["']image["'][^>]*rel=["']preload["']/i.test(rendered.html),
+      hiddenOverlays: rendered.hiddenOverlays,
+      cwvLab: rendered.mobileVitals
+        ? { lcpSeconds: Math.round(rendered.mobileVitals.lcpMs / 10) / 100, cls: Math.round(rendered.mobileVitals.cls * 1000) / 1000 }
+        : undefined,
+    },
     stats: {
       blockedRequests: rendered.stats.blocked + rendered.stats.ssrfBlocked,
       stubbedRequests: rendered.stats.stubbed,

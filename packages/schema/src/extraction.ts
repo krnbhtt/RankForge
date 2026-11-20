@@ -108,6 +108,8 @@ export const CtaPositionSchema = z.object({
   top: z.number(),
   aboveFold: z.boolean(),
   sticky: z.boolean(),
+  /** Rendered height in CSS px, used for the 48 px tap-target check. */
+  heightPx: z.number().nonnegative().optional(),
 });
 export type CtaPosition = z.infer<typeof CtaPositionSchema>;
 
@@ -178,6 +180,15 @@ export const ExtractionSchema = z.object({
   designTokens: DesignTokensSchema,
   components: z.array(ComponentInventoryItemSchema),
   classWhitelist: z.array(z.string()),
+  /** Facts that are lost when the snapshot is rewritten (preload links, hidden pop-ups). */
+  pageSignals: z
+    .object({
+      heroPreloaded: z.boolean(),
+      hiddenOverlays: z.number().int().nonnegative(),
+      /** LCP and CLS measured in our own mobile Chromium (unthrottled lab run), used when PageSpeed Insights is unavailable. */
+      cwvLab: z.object({ lcpSeconds: z.number().nonnegative().optional(), cls: z.number().nonnegative().optional() }).optional(),
+    })
+    .optional(),
   stats: z.object({
     blockedRequests: z.number().int().nonnegative(),
     stubbedRequests: z.number().int().nonnegative(),

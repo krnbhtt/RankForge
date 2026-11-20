@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockedSiteError, type Extraction, type GroundingResult, type SerpResult } from '@rankforge/schema';
-import { MODELS, SpendTracker, generateJson, z } from '../src/ai/gemini.js';
+import { MODELS, SpendTracker, generateJson, resetModelCooldowns, z } from '../src/ai/gemini.js';
 import { captureCompetitors, type CompetitorCandidate } from '../src/competitors/capture.js';
 import { buildConsensus } from '../src/competitors/consensus.js';
 import { discoverAiCitedSources } from '../src/competitors/grounding.js';
@@ -16,6 +16,7 @@ const geminiReply = (text: string, input = 100, output = 50) =>
   json({ candidates: [{ content: { parts: [{ text }] } }], usageMetadata: { promptTokenCount: input, candidatesTokenCount: output } });
 
 describe('generateJson', () => {
+  beforeEach(() => resetModelCooldowns());
   const schema = z.object({ colours: z.array(z.string()).min(1) });
 
   it('returns validated JSON and tracks spend', async () => {

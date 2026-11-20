@@ -453,6 +453,12 @@ export const AuditFindingSchema = z.object({
   description: z.string(),
   penaltyPoints: z.number().nonnegative(),
   evidence: z.string().optional(),
+  /** How many competitors show the element this finding is about (spec 6.1). */
+  competitorCount: z.number().int().nonnegative().optional(),
+  /** Screenshot region for annotation, as fractions of the image (spec 6.1). */
+  region: z
+    .object({ viewport: z.enum(['mobile', 'desktop']), x: z.number(), y: z.number(), width: z.number(), height: z.number() })
+    .optional(),
   createdAt: z.string(),
 });
 export type AuditFinding = z.infer<typeof AuditFindingSchema>;

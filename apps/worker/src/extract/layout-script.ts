@@ -175,6 +175,7 @@ export const LAYOUT_SCRIPT = `(() => {
       top: Math.round(r.top + window.scrollY),
       aboveFold: r.bottom <= VIEW_H && r.top >= 0,
       sticky: sticky(el),
+      heightPx: Math.round(r.height),
     };
   });
 
@@ -258,3 +259,16 @@ export const NEUTRALISE_OVERLAYS_SCRIPT = `(() => {
   }
   return hidden;
 })()`;
+
+
+/** Registers LCP and layout-shift observers before the page scripts run (used as an init script). */
+export const VITALS_INIT_SCRIPT = `(() => {
+  const v = { lcp: 0, cls: 0 };
+  window.__rfVitals = v;
+  try {
+    new PerformanceObserver((list) => { for (const e of list.getEntries()) v.lcp = e.startTime; }).observe({ type: 'largest-contentful-paint', buffered: true });
+    new PerformanceObserver((list) => { for (const e of list.getEntries()) { if (!e.hadRecentInput) v.cls += e.value; } }).observe({ type: 'layout-shift', buffered: true });
+  } catch (err) { v.unsupported = true; }
+})()`;
+
+export const READ_VITALS_SCRIPT = `(() => { const v = window.__rfVitals; return v && !v.unsupported ? { lcpMs: v.lcp, cls: v.cls } : null; })()`;

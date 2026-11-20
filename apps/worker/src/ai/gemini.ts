@@ -17,6 +17,16 @@ export type ModelRole = keyof typeof MODELS;
  * Fallback order per role. Free-tier keys have a small daily request quota per model, so when one model is out of
  * quota (or overloaded) the next one in the chain is tried. Order is quality first.
  */
+/** Models that recently ran out of quota or timed out are skipped until this time (ms since epoch). */
+const cooldownUntil = new Map<string, number>();
+const QUOTA_COOLDOWN_MS = 30 * 60_000;
+const SLOW_COOLDOWN_MS = 5 * 60_000;
+
+/** Test hook: forget all cooldowns. */
+export function resetModelCooldowns(): void {
+  cooldownUntil.clear();
+}
+
 export const MODEL_CHAINS: Record<ModelRole, string[]> = {
   flash: [MODELS.flash, 'gemini-3-flash-preview', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'],
   pro: [MODELS.pro, MODELS.flash, 'gemini-3-flash-preview', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'],
@@ -65,6 +75,8 @@ export interface GenerateJsonOptions<T> {
   /** Extra parts such as screenshots. */
   parts?: GeminiPart[];
   temperature?: number;
+  /** Fixed seed so repeated analysis runs give the same judgement. */
+  seed?: number;
   tools?: unknown[];
   spend?: SpendTracker;
   logger?: Logger;
@@ -95,7 +107,7 @@ class RetriableHttpError extends Error {
 }
 
 async function callGemini(
-  options: Pick<GenerateJsonOptions<unknown>, 'system' | 'temperature' | 'tools' | 'apiKey' | 'fetchImpl' | 'timeoutMs'> & {
+  options: Pick<GenerateJsonOptions<unknown>, 'system' | 'temperature' | 'seed' | 'tools' | 'apiKey' | 'fetchImpl' | 'timeoutMs'> & {
     model: string;
     contents: unknown;
     jsonSchema?: unknown;
@@ -108,6 +120,7 @@ async function callGemini(
     contents: options.contents,
     generationConfig: {
       temperature: options.temperature ?? 0.2,
+      ...(options.seed !== undefined ? { seed: options.seed } : {}),
       ...(options.jsonSchema
         ? { responseMimeType: 'application/json', responseJsonSchema: options.jsonSchema }
         : {}),
@@ -184,7 +197,11 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
   const jsonSchema = zodToJsonSchema(options.schema, { $refStrategy: 'none', target: 'jsonSchema7' });
   delete (jsonSchema as Record<string, unknown>).$schema;
 
-  const chain = MODEL_CHAINS[options.role];
+  const fullChain = MODEL_CHAINS[options.role];
+  const seed = options.seed ?? 42;
+  const available = fullChain.filter((m) => (cooldownUntil.get(m) ?? 0) <= Date.now());
+  // If every model is cooling down, try them all again rather than failing outright.
+  const chain = available.length > 0 ? available : fullChain;
   let modelIndex = 0;
   const userParts: GeminiPart[] = [{ text: options.prompt }, ...(options.parts ?? [])];
   let contents: { role: string; parts: GeminiPart[] }[] = [{ role: 'user', parts: userParts }];
@@ -197,12 +214,15 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
     for (; modelIndex < chain.length; modelIndex++) {
       const model = chain[modelIndex] as string;
       try {
-        raw = await callWithBackoff(logger, ctx, () => callGemini({ ...options, model, contents, jsonSchema }), modelIndex === chain.length - 1 ? 3 : 0);
+        raw = await callWithBackoff(logger, ctx, () => callGemini({ ...options, seed, model, contents, jsonSchema, timeoutMs: options.timeoutMs ?? (modelIndex === chain.length - 1 ? 90_000 : 45_000) }), modelIndex === chain.length - 1 ? 3 : 0);
         break;
       } catch (err) {
         const nextModel = chain[modelIndex + 1];
-        const unavailable = err instanceof QuotaError || (err instanceof UpstreamModelError && [500, 502, 503, 504].includes(Number(err.details?.status)));
+        const unavailable =
+          err instanceof QuotaError ||
+          (err instanceof UpstreamModelError && ([500, 502, 503, 504].includes(Number(err.details?.status)) || Boolean(err.details?.reason)));
         if (!unavailable || !nextModel) throw err;
+        cooldownUntil.set(model, Date.now() + (err instanceof QuotaError ? QUOTA_COOLDOWN_MS : SLOW_COOLDOWN_MS));
         logger('warn', 'model unavailable; trying the next one', { ...ctx, model, next: nextModel, code: err.code });
       }
     }

@@ -62,72 +62,20 @@ export function StudioDrawer({
   const baseline = scores?.baseline;
   const optimized = scores?.optimized;
 
-  // Score metrics (fall back to Phase 0 defaults if not yet populated)
-  const visBefore = baseline?.visibility?.current ?? 42;
-  const visAfter = optimized?.visibility?.current ?? 78;
-  const visDelta = visAfter - visBefore;
+  // Scores come only from the audit record. "After" appears once the optimised page has been built and scored.
+  const visBefore = baseline?.visibility?.current;
+  const visAfter = optimized?.visibility?.current;
+  const convBefore = baseline?.conversion?.current;
+  const convAfter = optimized?.conversion?.current;
+  const ppiBefore = baseline?.ppi?.current;
+  const ppiAfter = optimized?.ppi?.current;
+  const gain = (before?: number, after?: number) =>
+    before !== undefined && after !== undefined ? Math.round((after - before) * 10) / 10 : undefined;
+  const visDelta = gain(visBefore, visAfter);
+  const convDelta = gain(convBefore, convAfter);
+  const ppiDelta = gain(ppiBefore, ppiAfter);
 
-  const convBefore = baseline?.conversion?.current ?? 36;
-  const convAfter = optimized?.conversion?.current ?? 81;
-  const convDelta = convAfter - convBefore;
-
-  const ppiBefore = baseline?.ppi?.current ?? 39;
-  const ppiAfter = optimized?.ppi?.current ?? 79;
-  const ppiDelta = ppiAfter - ppiBefore;
-
-  const attributions =
-    optimized?.attributions && optimized.attributions.length > 0
-      ? optimized.attributions
-      : [
-          {
-            ruleId: 'product_schema',
-            ruleName: 'Comprehensive Product JSON-LD Schema',
-            category: 'visibility' as const,
-            delta: 19,
-            reason: 'Added valid Product, Offer, AggregateRating, and FAQPage structured data',
-            isSample: false,
-          },
-          {
-            ruleId: 'trust_signals',
-            ruleName: 'India Trust & Payment Signals Block',
-            category: 'conversion' as const,
-            delta: 12,
-            reason: 'Injected Cash on Delivery and UPI acceptance guarantees above fold',
-            isSample: true,
-          },
-          {
-            ruleId: 'cta_optimization',
-            ruleName: 'Above-the-Fold Sticky ATC Button',
-            category: 'conversion' as const,
-            delta: 11,
-            reason: 'Increased CTA contrast, expanded touch target to 52px, added sticky mobile footer',
-            isSample: false,
-          },
-          {
-            ruleId: 'entity_coverage',
-            ruleName: 'Consensus Semantic Entity Enrichment',
-            category: 'visibility' as const,
-            delta: 8,
-            reason: 'Added missing competitor entities: heat retention, flow rate, spiral ribs',
-            isSample: false,
-          },
-          {
-            ruleId: 'query_sequence',
-            ruleName: 'Purchase Query Accordion FAQ',
-            category: 'visibility' as const,
-            delta: 7,
-            reason: 'Integrated top organic query answers directly into FAQPage schema',
-            isSample: false,
-          },
-          {
-            ruleId: 'mrp_clarity',
-            ruleName: 'Legal Metrology MRP & Discount Badge',
-            category: 'conversion' as const,
-            delta: 6,
-            reason: 'Clearly demarcated Maximum Retail Price and inclusive taxes declaration',
-            isSample: false,
-          },
-        ];
+  const attributions = optimized?.attributions ?? [];
 
   const sampleJsonLd = {
     '@context': 'https://schema.org/',
@@ -227,30 +175,30 @@ export function StudioDrawer({
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">Visibility</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {visBefore} &rarr; <span className="text-blue-600">{visAfter}</span>
+                  {visBefore ?? '—'} &rarr; <span className="text-blue-600">{visAfter ?? '—'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
-                  +{visDelta} pts
+                  {visDelta !== undefined ? `+${visDelta} pts` : 'Not built yet'}
                 </span>
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">Conversion</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {convBefore} &rarr; <span className="text-blue-600">{convAfter}</span>
+                  {convBefore ?? '—'} &rarr; <span className="text-blue-600">{convAfter ?? '—'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
-                  +{convDelta} pts
+                  {convDelta !== undefined ? `+${convDelta} pts` : 'Not built yet'}
                 </span>
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">PPI Index</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {ppiBefore} &rarr; <span className="text-blue-600">{ppiAfter}</span>
+                  {ppiBefore ?? '—'} &rarr; <span className="text-blue-600">{ppiAfter ?? '—'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
-                  +{ppiDelta} pts
+                  {ppiDelta !== undefined ? `+${ppiDelta} pts` : 'Not built yet'}
                 </span>
               </div>
             </div>
@@ -331,7 +279,7 @@ export function StudioDrawer({
             <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">
-                  Evidence Attributions (+{visDelta} Vis, +{convDelta} Conv)
+                  Evidence Attributions{visDelta !== undefined && convDelta !== undefined ? ` (+${visDelta} Vis, +${convDelta} Conv)` : ''}
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">
                   {attributions.length} Optimizations

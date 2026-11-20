@@ -23,7 +23,7 @@ export interface LayoutData {
   priceCandidates: { text: string; struck: boolean; selector: string }[];
   priceCurrency: string;
   variants: Extraction['variants'];
-  ctas: { text: string; selector: string; top: number; aboveFold: boolean; sticky: boolean }[];
+  ctas: { text: string; selector: string; top: number; aboveFold: boolean; sticky: boolean; heightPx?: number }[];
   designTokens: Extraction['designTokens'];
   components: Extraction['components'];
   pageHeight: number;
@@ -116,6 +116,7 @@ export interface BuildExtractionInput {
   mobile: LayoutData | null;
   desktop: LayoutData;
   stats: Extraction['stats'];
+  pageSignals?: Extraction['pageSignals'];
   now?: Date;
 }
 
@@ -150,6 +151,7 @@ export function buildExtraction(input: BuildExtractionInput): Extraction {
     designTokens: desktop.designTokens,
     components: desktop.components,
     classWhitelist: buildClassWhitelist(html, input.cssTexts),
+    pageSignals: input.pageSignals,
     stats: input.stats,
   };
   return ExtractionSchema.parse(extraction);
