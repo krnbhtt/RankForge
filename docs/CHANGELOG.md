@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 1 / T3-T9: capture engine (`apps/worker/src/capture`, `src/extract`)
+- `@rankforge/storage`: `ArtifactStorage` with local-disk and GCS adapters (`createStorageFromEnv`); keys are validated against traversal.
+- `captureTarget`: Playwright Chromium render at 390 px and 1440 px, lazy-load scroll, 45 s timeout with one retry without images, `BlockedSiteError` for 401/403/429/5xx, empty bodies and bot-challenge pages, final-URL SSRF re-check.
+- Tracker deny list and request rules: trackers aborted, non-GET requests to the store stubbed, other non-GET aborted, every URL passes the SSRF policy.
+- Asset proxy: CSS, JS, fonts and images stored by content hash; HTML and CSS (`url()`, `@import`, `srcset`, lazy `data-*`) rewritten for offline viewing; CSP injected into the snapshot.
+- Platform detection (Shopify, WooCommerce, Magento, BigCommerce, custom) and product data from `/products/{handle}.json` and the WooCommerce Store API.
+- Hydration detection: framework markers plus a sentinel-edit survival test run against the offline snapshot.
+- Extraction package (`extraction.json`, Zod-validated) and screenshots, written to the spec 6.2 layout. HTML-paste input uses the same pipeline.
+- Playwright pinned to 1.65.1; worker Dockerfile image tag updated to match.
+- Tests: 69 passing in `apps/worker`, including real-Chromium integration against a local fixture store (offline gallery and variant interaction verified).
+
 ### Added - Phase 1 / T2: extraction contracts and typed errors
 - `packages/schema`: `ExtractionSchema` (v1) with platform, hydration, heading tree, JSON-LD, images, price, variants, reviews, CTA positions, design tokens, component inventory and class whitelist.
 - Typed error classes (`UserInputError`, `BlockedSiteError`, `UpstreamModelError`, `QuotaError`, `PatchError`, `InternalError`) with recovery actions and `toAuditError()`.

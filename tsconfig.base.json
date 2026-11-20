@@ -36,6 +36,7 @@
       "@rankforge/config/*": ["./packages/config/src/*"],
       "@rankforge/skills": ["./packages/skills/src/index.ts"],
       "@rankforge/ssrf": ["./packages/ssrf/src/index.ts"],
+      "@rankforge/storage": ["./packages/storage/src/index.ts"],
       "@rankforge/skills/*": ["./packages/skills/src/*"]
     }
   }

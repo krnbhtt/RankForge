@@ -12,6 +12,7 @@ export default defineConfig({
       '@rankforge/scoring': path.resolve(__dirname, 'packages/scoring/src/index.ts'),
       '@rankforge/config': path.resolve(__dirname, 'packages/config/src/index.ts'),
       '@rankforge/ssrf': path.resolve(__dirname, 'packages/ssrf/src/index.ts'),
+      '@rankforge/storage': path.resolve(__dirname, 'packages/storage/src/index.ts'),
       '@rankforge/skills': path.resolve(__dirname, 'packages/skills/src/index.ts'),
     },
   },

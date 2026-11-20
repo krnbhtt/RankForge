@@ -43,3 +43,17 @@ The developer host OS is Windows 11. Cross-OS development between Windows host f
 - **Negative / Operational Needs**:
   - In Mode B, minor font rendering differences may exist between Windows Chromium and Linux Chromium (mitigated by explicit web-font downloading and deterministic DOM AST normalization).
   - Developers need local Node.js (v20+) and pnpm installed on Windows host, plus Playwright Chromium binaries (`npx playwright install chromium`) if operating in Mode B.
+
+## ADR-002: Phase 1 capture design choices
+
+### Status
+Accepted (2026-11-20)
+
+### Decisions
+1. **Worker location stays `apps/worker`** (the specification says `services/worker`); the preview service will live in `apps/preview`. The specification edit is proposed, not applied.
+2. **Snapshot source:** the rendered DOM (`page.content()` after scrolling) is the snapshot, with non-tracker scripts kept and rewritten to local copies so the gallery and variant selector keep working. A CSP in the snapshot allows only same-origin scripts and connections.
+3. **Selectors:** the layout script generates unique CSS selectors in-page. `@medv/finder` is installed but not used yet; it can be bundled for the patch stage if needed.
+4. **Browser-side code is plain strings** (`layout-script.ts`) so a build tool cannot inject helper references into the page context.
+5. **Hydration mode** is decided empirically: sentinel edits are placed in the snapshot HTML before scripts run and checked after load; framework markers are only the fallback.
+6. **Storage:** local-disk adapter by default, GCS when `BUCKET` is set (emulator via `STORAGE_EMULATOR_HOST`).
+

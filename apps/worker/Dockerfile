@@ -1,5 +1,5 @@
 # Cloud Run Worker Container with Playwright Chromium & Node 20
-FROM mcr.microsoft.com/playwright:v1.48.2-noble AS base
+FROM mcr.microsoft.com/playwright:v1.65.1-noble AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -13,10 +13,12 @@ COPY packages/schema/package.json ./packages/schema/
 COPY packages/scoring/package.json ./packages/scoring/
 COPY packages/config/package.json ./packages/config/
 COPY packages/skills/package.json ./packages/skills/
+COPY packages/ssrf/package.json ./packages/ssrf/
+COPY packages/storage/package.json ./packages/storage/
 COPY apps/worker/package.json ./apps/worker/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .

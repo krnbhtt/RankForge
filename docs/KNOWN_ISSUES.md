@@ -72,3 +72,11 @@ This document tracks known issues, technical risks, environment limitations, and
 ### 7. SSRF Protection Strictness
 - **Description**: E-commerce audit URLs must be thoroughly validated to prevent Server-Side Request Forgery against internal Google Cloud metadata endpoints (`169.254.169.254`, `metadata.google.internal`).
 - **Mitigation**: Pure DNS pre-resolution and IP blacklist validation implemented in `@rankforge/schema` and enforced at worker ingress on every HTTP redirect hop.
+
+### 8. Docker Desktop daemon not responding (2026-11-20)
+- **Status**: OPEN. `docker info` hangs on this machine, so the worker image and Linux-parity rendering are unverified.
+- **Also unverified**: the worker image runs `node apps/worker/dist/index.js`, but workspace packages export TypeScript source (`main: ./src/index.ts`), so the compiled worker cannot import them. Fix when Docker works: run with `tsx` or build the packages to `dist`.
+
+### 9. DNS rebinding window
+- Chromium resolves hostnames itself, so a host that passes the SSRF check could in theory re-resolve to a private address before connecting. Mitigated by checking every request and redirect hop; full pinning would need a proxy.
+
