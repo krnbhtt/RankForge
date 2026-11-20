@@ -48,7 +48,7 @@ steps:
       - --min-instances=0
       - --max-instances=10
       - --no-allow-unauthenticated
-      - --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,SERP_API_KEY=SERP_API_KEY:latest,PSI_API_KEY=PSI_API_KEY:latest
+      - --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,SERP_API_KEY=SERP_API_KEY:latest
       - --set-env-vars=BUCKET=$PROJECT_ID-artifacts,AUDIT_STORE=firestore,GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 
   - id: deploy-preview
