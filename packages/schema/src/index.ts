@@ -474,6 +474,8 @@ export const AuditQuerySchema = z.object({
 });
 export type AuditQuery = z.infer<typeof AuditQuerySchema>;
 
+import { BlueprintSectionSpecSchema } from './blueprint.js';
+
 export const AuditBlueprintSectionSchema = z.object({
   sectionId: z.string(),
   auditId: z.string(),
@@ -482,6 +484,8 @@ export const AuditBlueprintSectionSchema = z.object({
   strategy: z.string(),
   action: z.string(),
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
+  /** Full section plan (spec 6.1: type, h2/h3s, depth, justification, component reference). */
+  spec: BlueprintSectionSpecSchema.optional(),
 });
 export type AuditBlueprintSection = z.infer<typeof AuditBlueprintSectionSchema>;
 
@@ -496,6 +500,10 @@ export const AuditPatchSchema = z.object({
   reason: z.string(),
   isSample: z.boolean().default(false),
   status: z.enum(['pending', 'applied', 'failed']).default('pending'),
+  /** Why the operation failed or was dropped, shown in the report. */
+  failureReason: z.string().optional(),
+  /** The complete operation (attr, move target, replace type, all) so it can be replayed exactly. */
+  opJson: z.string().optional(),
   createdAt: z.string(),
 });
 export type AuditPatch = z.infer<typeof AuditPatchSchema>;
@@ -533,3 +541,5 @@ export type Store = z.infer<typeof StoreSchema>;
 export * from './extraction.js';
 export * from './errors.js';
 export * from './competitors.js';
+export * from './blueprint.js';
+export * from './rebuild.js';

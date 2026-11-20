@@ -351,5 +351,11 @@ export async function buildSnapshot(args: {
   }
 
   await storage.put(`${auditId}/target/index.html`, rewrittenHtml, 'text/html; charset=utf-8');
+  // Static copy: the rendered DOM with every executable script removed. It cannot show the gallery or variant
+  // interactions but cannot be re-laid-out by store scripts either; used when the interactive copy drifts.
+  const staticDoc = cheerio.load(rewrittenHtml);
+  staticDoc('script:not([type="application/ld+json"])').remove();
+  staticDoc('[onclick], [onload]').removeAttr('onclick').removeAttr('onload');
+  await storage.put(`${auditId}/target/static.html`, staticDoc.html(), 'text/html; charset=utf-8');
   return { html: rewrittenHtml, stored };
 }

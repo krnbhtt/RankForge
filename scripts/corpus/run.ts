@@ -41,6 +41,8 @@ interface Result {
   totalMs: number;
   assets: number;
   diffPct: number | '';
+  staticDiffPct: number | '';
+  bestMode: 'interactive' | 'static' | '';
   heightRatio: number | '';
   externalAssets: number | '';
   pageErrors: number | '';
@@ -77,9 +79,10 @@ async function scrollThrough(page: import('playwright').Page): Promise<void> {
 async function reproductionCheck(
   browser: Browser,
   storage: LocalDiskStorage,
-  auditId: string
+  auditId: string,
+  entry: 'index.html' | 'static.html' = 'index.html'
 ): Promise<Pick<Result, 'diffPct' | 'heightRatio' | 'externalAssets' | 'pageErrors' | 'interaction'>> {
-  const html = (await storage.get(`${auditId}/target/index.html`))?.body.toString('utf8') ?? '';
+  const html = (await storage.get(`${auditId}/target/${entry}`))?.body.toString('utf8') ?? '';
   const live = (await storage.get(`${auditId}/target/screens/desktop.png`))?.body;
   if (!html || !live) throw new Error('missing snapshot or live screenshot');
 
@@ -168,6 +171,8 @@ async function runRow(row: Row, storage: LocalDiskStorage, browser: Browser): Pr
     totalMs: 0,
     assets: 0,
     diffPct: '',
+    staticDiffPct: '',
+    bestMode: '',
     heightRatio: '',
     externalAssets: '',
     pageErrors: '',
@@ -188,11 +193,22 @@ async function runRow(row: Row, storage: LocalDiskStorage, browser: Browser): Pr
       assets: extraction.stats.assetCount,
       ...check,
     };
+    // When the interactive copy drifts, measure the static copy (scripts removed) too.
+    let best: 'interactive' | 'static' = 'interactive';
+    if (typeof check.diffPct === 'number' && check.diffPct > DIFF_THRESHOLD_PCT) {
+      const staticCheck = await reproductionCheck(browser, storage, auditId, 'static.html').catch(() => null);
+      if (staticCheck && typeof staticCheck.diffPct === 'number') {
+        result.staticDiffPct = staticCheck.diffPct;
+        if (staticCheck.diffPct < check.diffPct) best = 'static';
+      }
+    }
+    result.bestMode = best;
+    const bestDiff = best === 'static' ? (result.staticDiffPct as number) : check.diffPct;
     result.pass =
       row.expected === 'ok' &&
-      typeof check.diffPct === 'number' &&
-      check.diffPct <= DIFF_THRESHOLD_PCT &&
-      check.interaction !== 'script-error';
+      typeof bestDiff === 'number' &&
+      bestDiff <= DIFF_THRESHOLD_PCT &&
+      (best === 'static' || check.interaction !== 'script-error');
     return result;
   } catch (err) {
     const blocked = err instanceof BlockedSiteError;
@@ -245,10 +261,13 @@ async function main() {
   const passed = okRows.filter((r) => r.pass).length;
   const blockedRows = results.filter((r) => r.expected === 'blocked');
   const blockedOk = blockedRows.filter((r) => r.pass).length;
+  const interactivePass = okRows.filter((r) => r.pass && r.bestMode === 'interactive').length;
   const under20 = okRows.filter((r) => r.status === 'ok' && r.totalMs <= 20_000).length;
   const pct = okRows.length ? Math.round((passed / okRows.length) * 1000) / 10 : 0;
   console.log(
     `\nReproduced with <=${DIFF_THRESHOLD_PCT}% pixel difference: ${passed}/${okRows.length} (${pct}%). Target: 90%.\n` +
+      `  of which interactive (gallery and variants work): ${interactivePass}; static copy only: ${passed - interactivePass}.
+` +
       `Blocked path handled: ${blockedOk}/${blockedRows.length}. Captured within 20 s: ${under20}/${okRows.length}.`
   );
 }

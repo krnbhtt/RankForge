@@ -199,11 +199,11 @@ describe('profiles and consensus', () => {
       ...buildProfile(id, fakeExtraction(), entities),
       trust: trust as never,
     });
-    const profiles = [mk('1', ['a', 'b'], ['cod']), mk('2', ['a'], ['cod', 'upi']), mk('3', ['a', 'c'], ['cod'])];
+    const profiles = [mk('1', ['alpha fabric', 'beta finish'], ['cod']), mk('2', ['alpha fabric'], ['cod', 'upi']), mk('3', ['alpha fabric', 'gamma sole'], ['cod'])];
     const c1 = buildConsensus(profiles);
     const c2 = buildConsensus(profiles);
     expect(c1).toEqual(c2);
-    expect(c1.entities[0]).toEqual({ name: 'a', frequency: 3 });
+    expect(c1.entities[0]).toEqual({ name: 'alpha fabric', frequency: 3 });
     expect(c1.trustElements.find((t) => t.kind === 'cod')?.frequency).toBe(3);
     expect(c1.cta.aboveFoldMobileShare).toBe(1);
     expect(c1.lowConfidence).toBe(true);
@@ -298,5 +298,21 @@ describe('captureCompetitors', () => {
     };
     await captureCompetitors({ auditId: 'a', candidates: candidates.slice(0, 10), storage: {} as never, capture: capture as never, concurrency: 5, logger: silentLog });
     expect(peak).toBeLessThanOrEqual(5);
+  });
+});
+
+import { entityKey } from '../src/competitors/consensus.js';
+
+describe('entity clustering', () => {
+  it('treats wording variants as one entity', () => {
+    expect(entityKey('Dishwasher-safe')).toBe(entityKey('dishwasher safe'));
+    expect(entityKey('long lasting formula')).toBe(entityKey('long-lasting formulas'));
+    expect(entityKey('lead free glaze')).not.toBe(entityKey('microwave safe'));
+  });
+
+  it('counts a cluster once per competitor', () => {
+    const mk = (id: string, entities: string[]) => ({ ...buildProfile(id, fakeExtraction(), []), entities });
+    const c = buildConsensus([mk('1', ['dishwasher safe']), mk('2', ['Dishwasher-safe', 'dishwasher safe']), mk('3', ['microwave safe'])]);
+    expect(c.entities.find((e) => /dishwasher/i.test(e.name))?.frequency).toBe(2);
   });
 });

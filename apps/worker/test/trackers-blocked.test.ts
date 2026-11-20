@@ -63,6 +63,17 @@ describe('assertNotBlocked', () => {
     ).toThrow(/bot-check/);
   });
 
+  it('flags a short continue-shopping interstitial (soft block)', () => {
+    expect(() =>
+      assertNotBlocked({
+        status: 200,
+        html: '<html><body>Click the button below to continue shopping</body></html>',
+        title: 'Amazon.com',
+        visibleTextLength: 120,
+      })
+    ).toThrow(/bot-check/);
+  });
+
   it('does not flag a long real page that merely embeds a captcha script', () => {
     expect(() =>
       assertNotBlocked({

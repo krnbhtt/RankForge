@@ -26,6 +26,19 @@ const CHALLENGE_BODY_MARKERS = [
   'distil_r_captcha',
 ];
 
+/** Short pages that only ask the visitor to prove they are human or press a button to continue. */
+const INTERSTITIAL_PHRASES = [
+  'click the button below to continue',
+  'continue shopping',
+  'enable javascript and cookies',
+  'please verify you are a human',
+  'unusual traffic',
+  'not a robot',
+  'before you continue',
+  'automated access',
+];
+const INTERSTITIAL_MAX_TEXT = 500;
+
 /** A real product page has far more text than a challenge interstitial. */
 const MIN_REAL_TEXT_LENGTH = 400;
 
@@ -52,6 +65,14 @@ export function assertNotBlocked(input: BlockCheckInput): void {
 
   if (html.trim().length === 0 || visibleTextLength === 0) {
     throw new BlockedSiteError('The page returned no content.', 'empty_body', { status });
+  }
+
+  if (visibleTextLength < INTERSTITIAL_MAX_TEXT) {
+    const visible = html.toLowerCase();
+    const phrase = INTERSTITIAL_PHRASES.find((p) => visible.includes(p));
+    if (phrase) {
+      throw new BlockedSiteError('The site showed a bot-check page instead of the product.', 'challenge_page', { marker: phrase });
+    }
   }
 
   const lowerTitle = title.toLowerCase();

@@ -81,7 +81,9 @@ export function createPreviewApp(storage: ArtifactStorage) {
       res.status(400).type('text/plain').send('Bad request');
       return;
     }
-    if (relative === '' || relative.endsWith('/')) relative += 'index.html';
+    const wantsStatic = req.query.static === '1' && (relative === '' || relative === 'index.html');
+    if (relative === '' || relative.endsWith('/')) relative += wantsStatic ? 'static.html' : 'index.html';
+    else if (wantsStatic) relative = 'static.html';
 
     const key = `${auditId}/${folder}/${relative}`;
     try {
@@ -109,9 +111,10 @@ export function createPreviewApp(storage: ArtifactStorage) {
         return;
       }
       const isHtml = relative.endsWith('.html');
+      const isEntry = relative === 'index.html' || relative === 'static.html';
       res.setHeader('Content-Type', object.contentType || contentTypeForKey(relative));
       res.setHeader('Cache-Control', isHtml ? 'no-store' : 'public, max-age=86400, immutable');
-      res.status(200).send(isHtml && relative === 'index.html' ? injectScrollSync(object.body.toString('utf8')) : object.body);
+      res.status(200).send(isHtml && isEntry ? injectScrollSync(object.body.toString('utf8')) : object.body);
       logRequest({ auditId, variant, path: relative, status: 200, durationMs: Date.now() - started });
     } catch (err) {
       logRequest({

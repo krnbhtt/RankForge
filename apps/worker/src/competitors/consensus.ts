@@ -9,6 +9,27 @@ import {
 /** Fewer usable competitors than this flags "low competitor confidence" (spec 4.3). */
 export const LOW_CONFIDENCE_BELOW = 5;
 
+const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'of', 'a', 'an', 'in', 'to', 'your', 'our', 'made', 'free', 'high', 'quality']);
+
+function stem(word: string): string {
+  return word.replace(/(ing|ed|es|s)$/i, '').replace(/(.)$/, '$1');
+}
+
+/**
+ * Key that makes "dishwasher safe", "Dishwasher-safe" and "safe for dishwashers" the same entity: lowercase,
+ * stop words dropped, light stemming, tokens sorted.
+ */
+export function entityKey(entity: string): string {
+  const tokens = entity
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !STOPWORDS.has(t))
+    .map(stem)
+    .filter(Boolean);
+  return [...new Set(tokens)].sort().join(' ');
+}
+
 function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -50,8 +71,23 @@ export function buildConsensus(profiles: CompetitorProfile[]): ConsensusModel {
 
   const sortByFrequency = <T extends { frequency: number }>(rows: T[]) => rows.sort((a, b) => b.frequency - a.frequency);
 
+  // Cluster similar phrases, count each cluster once per competitor, and name it by its most common wording.
+  const clusters = new Map<string, { names: Map<string, number>; competitors: Set<string> }>();
+  for (const p of profiles) {
+    for (const raw of p.entities) {
+      const key = entityKey(raw);
+      if (!key) continue;
+      const c = clusters.get(key) ?? { names: new Map<string, number>(), competitors: new Set<string>() };
+      c.names.set(raw, (c.names.get(raw) ?? 0) + 1);
+      c.competitors.add(p.competitorId);
+      clusters.set(key, c);
+    }
+  }
   const entities = sortByFrequency(
-    [...tally(profiles.map((p) => p.entities)).entries()].map(([name, frequency]) => ({ name, frequency }))
+    [...clusters.values()].map((c) => ({
+      name: [...c.names.entries()].sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)[0]![0],
+      frequency: c.competitors.size,
+    }))
   ).slice(0, 120);
   const schemaTypes = sortByFrequency(
     [...tally(profiles.map((p) => p.schemaTypes)).entries()].map(([type, frequency]) => ({ type, frequency }))
