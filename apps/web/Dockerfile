@@ -46,6 +46,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# The Cloud Tasks client loads JSON config files at runtime that the standalone trace leaves out, so ship it whole.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@google-cloud/tasks ./node_modules/@google-cloud/tasks
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/google-gax ./node_modules/google-gax
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@grpc ./node_modules/@grpc
 
 USER nextjs
 
