@@ -70,14 +70,8 @@ export type FeatureFlags = z.infer<typeof FeatureFlagsSchema>;
 // 3. Scraping & AST Capture Contracts
 // ==========================================
 
-export const PlatformTypeEnum = z.enum([
-  'shopify',
-  'woocommerce',
-  'magento',
-  'bigcommerce',
-  'custom',
-  'unknown',
-]);
+import { PlatformTypeEnum } from './platform.js';
+export { PlatformTypeEnum };
 export type PlatformType = z.infer<typeof PlatformTypeEnum>;
 
 export const AssetSnapshotSchema = z.object({
@@ -504,3 +498,6 @@ export const StoreSchema = z.object({
   createdAt: z.string(),
 });
 export type Store = z.infer<typeof StoreSchema>;
+
+export * from './extraction.js';
+export * from './errors.js';

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 1 / T2: extraction contracts and typed errors
+- `packages/schema`: `ExtractionSchema` (v1) with platform, hydration, heading tree, JSON-LD, images, price, variants, reviews, CTA positions, design tokens, component inventory and class whitelist.
+- Typed error classes (`UserInputError`, `BlockedSiteError`, `UpstreamModelError`, `QuotaError`, `PatchError`, `InternalError`) with recovery actions and `toAuditError()`.
+- `PlatformTypeEnum` moved to `platform.ts` to avoid an import cycle.
+
 ### Added - Phase 1 / T1: shared SSRF guard (`packages/ssrf`)
 - New `@rankforge/ssrf` package replaces the duplicated copies in `apps/web/lib` and `apps/worker/src/lib`.
 - `validateTargetUrl` now checks every address a hostname resolves to, rejects URL credentials, and fails closed on DNS errors (the `example.com` / `.test` exemption is removed).
