@@ -59,6 +59,13 @@ export interface CaptureInput {
   urlPolicy?: UrlPolicy;
   renderTimeoutMs?: number;
   fetchProductData?: boolean;
+  /**
+   * Competitor mode: desktop render, screenshot and extraction only. No snapshot, mobile render,
+   * hydration test or platform product data.
+   */
+  lite?: boolean;
+  /** Object key prefix for screenshots and extraction. Defaults to `{auditId}/target`. */
+  artifactPrefix?: string;
   logger?: Logger;
   onProgress?: (step: CaptureStep) => Promise<void> | void;
 }
@@ -79,6 +86,10 @@ interface RenderedPage {
   recorder: AssetRecorder;
   stats: NetworkStats;
   renderMs: number;
+}
+
+function prefix(input: Pick<CaptureInput, 'auditId' | 'artifactPrefix'>): string {
+  return input.artifactPrefix ?? `${input.auditId}/target`;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -196,6 +207,7 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
     const mobilePage = await mobile.context.newPage();
 
     const mobileTask = (async (): Promise<LayoutData | null> => {
+      if (input.lite) return null;
       try {
         await loadAndInspect(mobilePage, input, timeoutMs, logger, policy);
         const layout = await collectLayout(mobilePage);
@@ -205,7 +217,7 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
           fullPage: true,
           clip: { x: 0, y: 0, width: MOBILE_VIEWPORT.width, height: clipHeight },
         });
-        await input.storage.put(`${input.auditId}/target/screens/mobile.png`, png, 'image/png');
+        await input.storage.put(`${prefix(input)}/screens/mobile.png`, png, 'image/png');
         return layout;
       } catch (err) {
         logger('warn', 'mobile render failed; continuing with desktop only', {
@@ -226,7 +238,7 @@ async function renderOnce(input: CaptureInput, imagesDisabled: boolean, timeoutM
       fullPage: true,
       clip: { x: 0, y: 0, width: DESKTOP_VIEWPORT.width, height: clipHeight },
     });
-    await input.storage.put(`${input.auditId}/target/screens/desktop.png`, png, 'image/png');
+    await input.storage.put(`${prefix(input)}/screens/desktop.png`, png, 'image/png');
 
     const mobileLayout = await mobileTask;
     await recorder.settle();
@@ -299,13 +311,15 @@ export async function captureTarget(input: CaptureInput): Promise<CaptureOutput>
   await input.onProgress?.('snapshotting');
   const snapshotStart = Date.now();
   const storage = input.storage;
-  const snapshot = await buildSnapshot({
-    html: rendered.html,
-    baseUrl: rendered.finalUrl,
-    recorder: rendered.recorder,
-    storage,
-    auditId: input.auditId,
-  });
+  const snapshot = input.lite
+    ? { html: rendered.html, stored: [] as Awaited<ReturnType<typeof buildSnapshot>>['stored'] }
+    : await buildSnapshot({
+        html: rendered.html,
+        baseUrl: rendered.finalUrl,
+        recorder: rendered.recorder,
+        storage,
+        auditId: input.auditId,
+      });
   const snapshotMs = Date.now() - snapshotStart;
 
   await input.onProgress?.('analysing');
@@ -316,7 +330,7 @@ export async function captureTarget(input: CaptureInput): Promise<CaptureOutput>
     finalUrl: rendered.finalUrl,
   });
   const productDataTask =
-    input.fetchProductData === false
+    input.fetchProductData === false || input.lite
       ? Promise.resolve(undefined)
       : fetchPlatformProductData(platformBase.type, rendered.finalUrl).catch((err: Error) => {
           logger('warn', 'platform product data unavailable', {
@@ -328,7 +342,9 @@ export async function captureTarget(input: CaptureInput): Promise<CaptureOutput>
         });
 
   const browser = await getBrowser();
-  const survived = await sentinelSurvives({ browser, storage, auditId: input.auditId, html: snapshot.html });
+  const survived = input.lite
+    ? null
+    : await sentinelSurvives({ browser, storage, auditId: input.auditId, html: snapshot.html });
   const hydration = decideHydration(rendered.frameworkMarkers, survived);
   const productData = await productDataTask;
 
@@ -355,7 +371,7 @@ export async function captureTarget(input: CaptureInput): Promise<CaptureOutput>
       imagesDisabled,
     },
   });
-  await storage.put(`${input.auditId}/target/extraction.json`, JSON.stringify(extraction, null, 2), 'application/json');
+  await storage.put(`${prefix(input)}/extraction.json`, JSON.stringify(extraction, null, 2), 'application/json');
 
   const analysisMs = Date.now() - analysisStart;
   const totalMs = Date.now() - totalStart;

@@ -526,3 +526,4 @@ export type Store = z.infer<typeof StoreSchema>;
 
 export * from './extraction.js';
 export * from './errors.js';
+export * from './competitors.js';
