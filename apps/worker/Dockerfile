@@ -14,6 +14,7 @@ COPY packages/scoring/package.json ./packages/scoring/
 COPY packages/config/package.json ./packages/config/
 COPY packages/skills/package.json ./packages/skills/
 COPY packages/ssrf/package.json ./packages/ssrf/
+COPY packages/audit-store/package.json ./packages/audit-store/
 COPY packages/storage/package.json ./packages/storage/
 COPY apps/worker/package.json ./apps/worker/
 

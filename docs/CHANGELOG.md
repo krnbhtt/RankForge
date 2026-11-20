@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 1 / T0: Firestore audit store, corpus runner (T14), Phase 1 report (T15)
+- `@rankforge/audit-store`: one `IAuditStore` with file and Firestore implementations (transactional updates, deterministic document ids, `ownerUid` for the security rules). Selected by `FIRESTORE_EMULATOR_HOST` or `AUDIT_STORE=firestore`; the worker and web app both use it. `firebase.json` and `firestore.rules` added for the local emulator.
+- `pnpm corpus`: capture, offline reload, pixel diff, interaction check; writes `docs/corpus-results.csv`. See `docs/phases/PHASE-1-REPORT.md` (exit criterion not met: 12 of 18, 66.7%).
+- Capture: overlay neutraliser, spec-conformant srcset parser.
+
 ### Added - Phase 1 / T10-T13: HTML paste, rf-preview, studio iframes, job-flow wiring
 - `POST /api/audits/{id}/html` (blocked or failed audits only): stores the pasted HTML and re-queues; capture reuses the same pipeline.
 - `apps/preview` (`rf-preview`, port 4060): serves `/preview/{auditId}/{current|optimised}/` with `X-Robots-Tag: noindex`, traversal-safe keys, a scroll-sync bridge injected at serve time.

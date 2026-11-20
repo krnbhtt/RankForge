@@ -6,6 +6,7 @@ const nextConfig = {
     '@rankforge/scoring',
     '@rankforge/config',
     '@rankforge/ssrf',
+    '@rankforge/audit-store',
     '@rankforge/storage',
   ],
   output: 'standalone',

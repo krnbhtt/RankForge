@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google-cloud/tasks": "^5.5.0",
+    "@rankforge/audit-store": "workspace:*",
     "@rankforge/config": "workspace:*",
     "@rankforge/schema": "workspace:*",
     "@rankforge/scoring": "workspace:*",

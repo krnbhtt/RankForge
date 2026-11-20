@@ -14,6 +14,7 @@ export default defineConfig({
       { find: '@rankforge/scoring', replacement: pkg('scoring') },
       { find: '@rankforge/config', replacement: pkg('config') },
       { find: '@rankforge/ssrf', replacement: pkg('ssrf') },
+      { find: '@rankforge/audit-store', replacement: pkg('audit-store') },
       { find: '@rankforge/storage', replacement: pkg('storage') },
       { find: '@rankforge/skills', replacement: pkg('skills') },
       // The Next.js app uses `@/` for its own source root.

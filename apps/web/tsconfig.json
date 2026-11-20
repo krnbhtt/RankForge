@@ -25,6 +25,7 @@
       "@rankforge/scoring": ["../../packages/scoring/src/index.ts"],
       "@rankforge/config": ["../../packages/config/src/index.ts"],
       "@rankforge/ssrf": ["../../packages/ssrf/src/index.ts"],
+      "@rankforge/audit-store": ["../../packages/audit-store/src/index.ts"],
       "@rankforge/storage": ["../../packages/storage/src/index.ts"]
     }
   },

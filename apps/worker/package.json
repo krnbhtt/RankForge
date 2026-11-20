@@ -16,6 +16,7 @@
   "dependencies": {
     "@google/genai": "^3.6.1",
     "@medv/finder": "^4.0.2",
+    "@rankforge/audit-store": "workspace:*",
     "@rankforge/config": "workspace:*",
     "@rankforge/schema": "workspace:*",
     "@rankforge/scoring": "workspace:*",
