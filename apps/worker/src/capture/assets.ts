@@ -100,15 +100,38 @@ function resolveUrl(raw: string, baseUrl: string): string | null {
   }
 }
 
-function parseSrcset(value: string): { url: string; descriptor: string }[] {
-  return value
-    .split(/,(?=\s*\S)/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const [url = '', ...rest] = part.split(/\s+/);
-      return { url, descriptor: rest.join(' ') };
-    });
+/**
+ * Parses a srcset attribute following the HTML spec: a candidate URL ends at whitespace (so URLs may
+ * contain commas, as Cloudflare image-resizing paths do), and an optional descriptor runs to the next comma.
+ */
+export function parseSrcset(value: string): { url: string; descriptor: string }[] {
+  const out: { url: string; descriptor: string }[] = [];
+  let i = 0;
+  const n = value.length;
+  while (i < n) {
+    while (i < n && /[\s,]/.test(value[i] as string)) i++;
+    if (i >= n) break;
+    let start = i;
+    while (i < n && !/\s/.test(value[i] as string)) i++;
+    let url = value.slice(start, i);
+    let descriptor = '';
+    if (url.endsWith(',')) {
+      url = url.replace(/,+$/, '');
+    } else {
+      start = i;
+      let depth = 0;
+      while (i < n) {
+        const ch = value[i] as string;
+        if (ch === '(') depth++;
+        else if (ch === ')') depth = Math.max(0, depth - 1);
+        else if (ch === ',' && depth === 0) break;
+        i++;
+      }
+      descriptor = value.slice(start, i).trim();
+    }
+    if (url) out.push({ url, descriptor });
+  }
+  return out;
 }
 
 export interface SnapshotResult {

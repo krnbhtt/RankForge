@@ -220,3 +220,41 @@ export const LAYOUT_SCRIPT = `(() => {
 
   return { images, priceCandidates, priceCurrency, variants, ctas, designTokens, components, pageHeight: document.documentElement.scrollHeight };
 })()`;
+
+/**
+ * Hides time-dependent overlays (cookie banners, newsletter and country pop-ups, their backdrops)
+ * and releases scroll locks, so the captured page shows the product rather than a transient modal.
+ * Returns how many elements were hidden.
+ */
+export const NEUTRALISE_OVERLAYS_SCRIPT = `(() => {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let hidden = 0;
+  const hide = (el) => { el.setAttribute('data-rf-hidden-overlay', '1'); el.style.setProperty('display', 'none', 'important'); hidden++; };
+  const all = Array.from(document.querySelectorAll('body *'));
+  for (const el of all) {
+    if (el.hasAttribute('data-rf-hidden-overlay')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const r = el.getBoundingClientRect();
+    const isDialog = el.getAttribute('role') === 'dialog' || el.getAttribute('role') === 'alertdialog' || el.getAttribute('aria-modal') === 'true';
+    const fixed = cs.position === 'fixed';
+    const z = parseInt(cs.zIndex, 10) || 0;
+    const coversViewport = r.width >= vw * 0.9 && r.height >= vh * 0.9;
+    const looksLikeBar = r.top <= 2 && r.height < 140;
+    if (isDialog && r.width > 0) { hide(el); continue; }
+    if (!fixed) continue;
+    const text = (el.innerText || '').trim();
+    const cls = (el.className && el.className.toString ? el.className.toString() : '') + ' ' + (el.id || '');
+    const modalish = /modal|popup|pop-up|overlay|backdrop|cookie|consent|newsletter|subscribe|gdpr|banner-lightbox|lightbox|drawer-mask|country/i.test(cls);
+    if (coversViewport && text.length < 40) { hide(el); continue; }
+    if (modalish && !looksLikeBar && r.width > 150 && r.height > 80) { hide(el); continue; }
+    if (z >= 1000 && !looksLikeBar && r.width >= 280 && r.height >= 160 && r.width < vw * 0.98) { hide(el); continue; }
+    if (/cookie|consent|gdpr/i.test(cls) && r.bottom >= vh - 4) { hide(el); continue; }
+  }
+  for (const node of [document.documentElement, document.body]) {
+    node.style.setProperty('overflow', 'auto', 'important');
+    node.style.removeProperty('position');
+    node.classList.remove('no-scroll', 'modal-open', 'overflow-hidden', 'scroll-lock', 'is-locked');
+  }
+  return hidden;
+})()`;

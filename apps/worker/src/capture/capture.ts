@@ -7,7 +7,7 @@ import {
 } from '@rankforge/schema';
 import { validateTargetUrl } from '@rankforge/ssrf';
 import type { ArtifactStorage } from '@rankforge/storage';
-import { AUTO_SCROLL_SCRIPT } from '../extract/layout-script.js';
+import { AUTO_SCROLL_SCRIPT, NEUTRALISE_OVERLAYS_SCRIPT } from '../extract/layout-script.js';
 import { buildExtraction, collectLayout, type LayoutData } from '../extract/index.js';
 import { log as defaultLog, type Logger } from '../lib/log.js';
 import { AssetRecorder, buildSnapshot } from './assets.js';
@@ -144,6 +144,11 @@ async function loadAndInspect(
   await settle(page, logger, input.auditId);
   await page.evaluate(AUTO_SCROLL_SCRIPT);
   await page.waitForTimeout(400);
+  const hiddenOverlays = (await page.evaluate(NEUTRALISE_OVERLAYS_SCRIPT)) as number;
+  if (hiddenOverlays > 0) {
+    logger('info', 'hid transient overlays', { auditId: input.auditId, stage: 'capture', hiddenOverlays });
+    await page.waitForTimeout(250);
+  }
 
   const html = await page.content();
   const title = await page.title();

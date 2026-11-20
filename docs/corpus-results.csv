@@ -1,0 +1,21 @@
+id,url,expected,status,detectedPlatform,hydration,totalMs,assets,diffPct,heightRatio,externalAssets,pageErrors,interaction,pass,error
+c01,https://www.allbirds.com/products/womens-wool-cruiser-port-port-sole,ok,ok,shopify,server,22365,215,1.07,1,2,3,variant,true,
+c02,https://www.tentree.com/products/vintage-sunset-t-shirt-warm-oak-heather-terra,ok,ok,shopify,server,27422,239,0.18,1,30,2,gallery+variant,true,
+c03,https://www.tentree.com/products/mountain-summit-apex-hat-ridgeline-meteorite-black,ok,ok,shopify,server,22885,196,0.24,1,9,2,none-found,true,
+c04,https://www.deathwishcoffee.com/products/brewed-for-battle-klean-kanteen-bundle,ok,ok,shopify,server,24116,246,1.37,1,5,16,gallery+variant,true,
+c05,https://boat-lifestyle.com/products/boat-bassheads-210-active-black-buy-1-get-1-free,ok,ok,shopify,server,22715,165,2.89,0.98,18,11,gallery+variant,false,
+c06,https://boat-lifestyle.com/products/boat-partypal-800,ok,ok,shopify,server,19797,190,3.06,0.98,25,10,gallery+variant,false,
+c07,https://www.sugarcosmetics.com/products/set-of-2-matte-attack-transferproof-lipstick-3,ok,ok,shopify,server,22869,246,0.17,1,2,11,gallery+variant,true,
+c08,https://www.sugarcosmetics.com/products/set-of-2-matte-attack-transferproof-lipstick-4,ok,ok,shopify,server,23165,245,0.18,1,18,11,gallery+variant,true,
+c09,https://mamaearth.in/products/argan-smoothening-hair-mask-with-argan-avocado-for-for-frizz-control-repair-200-ml,ok,ok,shopify,server,30973,225,0.05,1,3,10,gallery+variant,true,
+c10,https://mamaearth.in/products/lemon-hair-care-duo,ok,ok,shopify,server,25871,249,1.97,1,20,10,gallery+variant,true,
+c11,https://www.chumbak.com/products/hibiscus-bloom-tumbler-set-of-2-and-kettle,ok,ok,shopify,server,22794,184,0.12,1,5,7,gallery+variant,true,
+c12,https://www.neemans.com/products/begin-walk-soothe-lace-ups-for-women-yellow,ok,ok,shopify,server,30536,369,0.87,1,21,13,gallery+variant,true,
+c13,https://snitch.co.in/products/oversized-textured-overshirt-4os017-03,ok,ok,shopify,server,20334,103,0.04,1,2,21,none-found,true,
+c14,https://www.sleepycat.in/products/carbon-mattress,ok,ok,shopify,server,28172,358,8.17,1,16,9,gallery+variant,false,
+c15,https://www.mivi.in/products/duopods-wave-1,ok,ok,shopify,server,11732,128,0.37,1,11,13,gallery,true,
+c16,https://www.woodenstreet.com/product/walken-bed-with-storage-honey-finish,ok,ok,custom,runtime,17192,199,14.12,0.59,36,9,gallery,false,
+c17,https://www.bata.com/in/bata-black-oxford-formal-shoes-for-men-500_2021_8316471.html,ok,blocked,,,4318,0,,,,,,false,"The page took too long to load, even without images."
+c18,https://www.buywow.in/brands/wow-skin-science/products/eau-de-parfum-luxury-perfume-kit-for-her-online,ok,ok,custom,server,11650,103,2.72,1,2,1,variant,false,
+c19,https://www.amazon.com/dp/B08N5WRWNW,blocked,blocked,,,6311,0,,,,,,true,The page returned no content.
+c20,https://www.amazon.in/dp/B09G9HD6PD,blocked,ok,custom,server,27153,389,2.02,1,29,18,gallery+variant,false,

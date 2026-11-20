@@ -2,7 +2,7 @@
   "name": "rankforge-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "RankForge AI Monorepo — Autonomous E-commerce Diagnostic & Optimization Engine",
+  "description": "RankForge AI Monorepo â€” Autonomous E-commerce Diagnostic & Optimization Engine",
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "build": "pnpm --recursive run build",
@@ -14,13 +14,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "docs:api": "tsx packages/schema/scripts/generate-api-docs.ts"
+    "docs:api": "tsx packages/schema/scripts/generate-api-docs.ts",
+    "corpus": "tsx --tsconfig scripts/tsconfig.json scripts/corpus/run.ts"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",
+    "@types/pngjs": "^6.0.5",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
     "eslint": "^8.57.1",
+    "pixelmatch": "^6.0.0",
+    "playwright": "1.65.1",
+    "pngjs": "^7.0.0",
     "prettier": "^3.3.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",

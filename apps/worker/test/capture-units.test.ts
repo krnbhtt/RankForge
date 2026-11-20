@@ -188,3 +188,24 @@ describe('withRetry', () => {
     expect(calls).toBe(1);
   });
 });
+
+import { parseSrcset } from '../src/capture/assets.js';
+
+describe('parseSrcset', () => {
+  it('keeps commas that are part of a URL', () => {
+    const parsed = parseSrcset(
+      'https://x.test/cdn-cgi/image/format=auto,width=256/https://cdn.test/a.jpg 256w, https://x.test/cdn-cgi/image/format=auto,width=512/https://cdn.test/a.jpg 512w'
+    );
+    expect(parsed).toEqual([
+      { url: 'https://x.test/cdn-cgi/image/format=auto,width=256/https://cdn.test/a.jpg', descriptor: '256w' },
+      { url: 'https://x.test/cdn-cgi/image/format=auto,width=512/https://cdn.test/a.jpg', descriptor: '512w' },
+    ]);
+  });
+  it('handles plain lists, densities and no-descriptor candidates', () => {
+    expect(parseSrcset('a.png, b.png 2x,c.png 3x')).toEqual([
+      { url: 'a.png', descriptor: '' },
+      { url: 'b.png', descriptor: '2x' },
+      { url: 'c.png', descriptor: '3x' },
+    ]);
+  });
+});
