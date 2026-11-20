@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+.data
+.logs
+.env*
+**/.next
+**/dist
+**/*.tsbuildinfo
+coverage
+docs
+.chromium-install.log

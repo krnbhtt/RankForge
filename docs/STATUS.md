@@ -11,9 +11,9 @@
 | 2 Competitors | Built | 7+ usable competitors per corpus URL | **Partly met**: 4 of the 5 URLs tried. `phases/PHASE-2-REPORT.md` |
 | 3 Analysis | Built | Scores repeat within ±3; every finding has evidence | **Met on the URL tested.** `phases/PHASE-3-REPORT.md` |
 | 4 Blueprint | Built | Every section traces to evidence | **Met** (enforced by schema, tested). `phases/PHASE-4-5-REPORT.md` |
-| 5 Rebuild | Built (no image studio) | Rebuild without breaking layout; after-scores measured | **Met on the pages tested.** Same report |
-| 6 Studio | Built (no Workspace screen) | A newcomer explains both failures | **Not tested with a person.** `phases/PHASE-6-7-REPORT.md` |
-| 7 Hardening | Partly | 9 of 10 unseen URLs complete | **Not run.** Nothing deployed; images never built |
+| 5 Rebuild | Built (image studio behind `FEATURE_IMAGE_GENERATION`, consent-gated) | Rebuild without breaking layout; after-scores measured | **Met on the pages tested.** Same report |
+| 6 Studio | Built (Summary and Plan tabs, Workspace screen without sign-in) | A newcomer explains both failures | **Not tested with a person**: protocol in `usability-test.md`, a proxy test was run and its four findings fixed. `phases/PHASE-6-7-REPORT.md` |
+| 7 Hardening | Partly | 9 of 10 unseen URLs complete | **Not run.** Needs search credits (`pnpm exam`, stops with a clear notice when they are out). Docker images build and run (worker, preview verified; web build in progress). Nothing deployed: needs gcloud sign-in and a project id |
 
 ## What runs today
 
@@ -21,7 +21,7 @@ Submit a URL in the studio. The worker captures and reproduces the page, finds c
 
 ## Known gaps
 
-See `docs/KNOWN_ISSUES.md`. The main ones: free-tier Gemini quota and exhausted SERP credits (so few live runs), no deployment, Docker images unbuilt (daemon hangs), no image generation, no Workspace screen, WooCommerce and Magento untested on live stores.
+See `docs/KNOWN_ISSUES.md`. The main ones: free-tier Gemini quota and exhausted SERP credits (so few live runs), no deployment (gcloud installed, not signed in), no Google sign-in for the Workspace, WooCommerce and Magento untested on live stores.
 
 ## Local run
 

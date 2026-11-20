@@ -6,7 +6,7 @@ const pkg = (name: string) => path.resolve(__dirname, `packages/${name}/src/inde
 export default defineConfig({
   test: {
     globals: true,
-    include: ['packages/*/test/**/*.test.ts', 'apps/*/test/**/*.test.ts', 'services/*/test/**/*.test.ts'],
+    include: ['packages/*/test/**/*.test.ts', 'apps/*/test/**/*.test.ts', 'services/*/test/**/*.test.ts', 'scripts/**/*.test.ts'],
   },
   resolve: {
     alias: [

@@ -84,6 +84,7 @@ export const RF_STYLES = `
 .rf-sample-chip{display:inline-block;font-size:11px;font-weight:600;line-height:1;padding:3px 6px;border-radius:4px;background:#fff3cd;color:#664d03;border:1px solid #ffda6a;margin-left:6px;vertical-align:middle}
 .rf-sticky{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;color:#111;border-top:1px solid #ddd;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
 .rf-sticky button{min-height:48px;padding:0 20px;border:0;border-radius:6px;background:#111;color:#fff;font-weight:600;cursor:pointer}
+.rf-section img{max-width:100%;height:auto}
 .rf-scoped{font-family:inherit;color:inherit;line-height:1.5}
 .rf-scoped *{max-width:100%}
 `;

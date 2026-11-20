@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/playwright:v1.65.1-noble
 ENV NODE_ENV=production \
     PORT=8080
 WORKDIR /app
-RUN corepack enable
+RUN npm install -g pnpm@9.12.3
 
 # Dependency manifests first so the install layer is cached.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./

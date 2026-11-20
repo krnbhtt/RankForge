@@ -169,7 +169,7 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
         if (res.status === 401 || res.status === 403) {
           throw new UpstreamModelError('The search data service rejected our credentials.', { status: res.status });
         }
-        if (res.status === 402) throw new QuotaError('The search data quota is used up.', { status: 402 });
+        if (res.status === 402) throw new QuotaError('The search data credits are used up.', { status: 402, service: 'serp' });
         if (!res.ok) throw new UpstreamModelError(`The search data service failed (HTTP ${res.status}).`);
         return (await res.json()) as unknown;
       },
@@ -182,7 +182,7 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
     );
   } catch (err) {
     if (err instanceof HttpStatusError) {
-      if (err.status === 429) throw new QuotaError('The search data service is busy right now.', { status: 429 });
+      if (err.status === 429) throw new QuotaError('The search data credits are used up or the service is busy.', { status: 429, service: 'serp' });
       throw new UpstreamModelError('The search data service is temporarily unavailable.', { status: err.status });
     }
     if (err instanceof Error && /timeout|aborted|fetch failed/i.test(err.message)) {
@@ -234,4 +234,29 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
       .map((q) => ({ question: q.question as string, answer: q.answer })),
     relatedSearches: raw.related_searches.map((s) => s.query).filter((q): q is string => Boolean(q)),
   });
+}
+
+export interface SerpCredits {
+  configured: boolean;
+  /** Searches left on the account, or null when the account could not be read. */
+  remainingSearches: number | null;
+  ok: boolean;
+}
+
+/** Reads the SERP account balance. The account endpoint is free, so this never spends credits. */
+export async function fetchSerpCredits(options: { apiKey?: string; fetchImpl?: typeof fetch } = {}): Promise<SerpCredits> {
+  const apiKey = options.apiKey ?? process.env.SERP_API_KEY;
+  if (!apiKey) return { configured: false, remainingSearches: null, ok: false };
+  try {
+    const res = await (options.fetchImpl ?? fetch)('https://www.searchapi.io/api/v1/me', {
+      headers: { authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return { configured: true, remainingSearches: null, ok: true };
+    const json = (await res.json()) as { account?: { remaining_searches?: number; remaining_credits?: number } };
+    const remaining = json.account?.remaining_searches ?? json.account?.remaining_credits;
+    return { configured: true, remainingSearches: typeof remaining === 'number' ? remaining : null, ok: typeof remaining === 'number' ? remaining > 0 : true };
+  } catch {
+    return { configured: true, remainingSearches: null, ok: true };
+  }
 }

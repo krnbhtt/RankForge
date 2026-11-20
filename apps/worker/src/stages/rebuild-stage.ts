@@ -17,6 +17,8 @@ export interface RebuildStageDeps {
   spend: SpendTracker;
   logger?: Logger;
   write?: typeof writeSection;
+  /** Operations produced outside the blueprint (generated images); verified like any other section. */
+  extraOps?: PatchOp[];
 }
 
 export interface RebuildResult {
@@ -90,7 +92,7 @@ export async function runRebuildStage(
   if (!snapshot) throw new Error('The reproduction is missing; cannot rebuild.');
   const whitelist = [...new Set([...target.classWhitelist, ...target.components.flatMap((c) => c.classes)])];
 
-  const ops: PatchOp[] = buildDeterministicOps(blueprint, target, snapshot);
+  const ops: PatchOp[] = [...buildDeterministicOps(blueprint, target, snapshot), ...(deps.extraOps ?? [])];
   const failures = new Map<PatchOp, string>();
   const dropped: RebuildResult['dropped'] = [];
 

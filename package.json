@@ -2,7 +2,7 @@
   "name": "rankforge-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "RankForge AI Monorepo â€” Autonomous E-commerce Diagnostic & Optimization Engine",
+  "description": "RankForge AI Monorepo \u00e2\u20ac\u201d Autonomous E-commerce Diagnostic & Optimization Engine",
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "build": "pnpm --recursive run build",
@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "docs:api": "tsx packages/schema/scripts/generate-api-docs.ts",
-    "corpus": "tsx --tsconfig scripts/tsconfig.json scripts/corpus/run.ts"
+    "corpus": "tsx --tsconfig scripts/tsconfig.json scripts/corpus/run.ts",
+    "exam": "tsx --tsconfig scripts/tsconfig.json scripts/exam/unseen-run.ts",
+    "record:backup": "tsx --tsconfig scripts/tsconfig.json scripts/record-backup.ts"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

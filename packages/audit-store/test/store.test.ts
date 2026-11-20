@@ -116,6 +116,17 @@ describe.each(stores)('%s contract', (_name, make) => {
     expect(await store.findRecentComplete('https://elsewhere.example.org/p', undefined, 60_000)).toBeNull();
   });
 
+  it('lists audits newest first and respects the limit', async () => {
+    const a = { ...record(`${id}_l1`), createdAt: '2026-01-01T00:00:00.000Z' };
+    const b = { ...record(`${id}_l2`), createdAt: '2026-06-01T00:00:00.000Z' };
+    await store.createAudit(a);
+    await store.createAudit(b);
+    const list = await store.listAudits(500);
+    const ids = list.map((x) => x.auditId);
+    expect(ids.indexOf(`${id}_l2`)).toBeLessThan(ids.indexOf(`${id}_l1`));
+    expect((await store.listAudits(1)).length).toBe(1);
+  });
+
   it('refuses malformed audit ids', async () => {
     await expect(store.getAudit('../escape')).rejects.toThrow();
   });

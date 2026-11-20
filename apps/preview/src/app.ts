@@ -42,7 +42,9 @@ export const ANNOTATION_SCRIPT =
   'var tag=document.createElement("b");tag.textContent=el.getAttribute("data-rf-tag")||"";pop.appendChild(tag);' +
   'if(el.getAttribute("data-rf-sample")==="true"){var s=document.createElement("i");s.textContent="Sample";pop.appendChild(s)}' +
   'var p=document.createElement("div");p.style.marginTop="6px";p.textContent=el.getAttribute("data-rf-reason")||"";pop.appendChild(p);el.appendChild(pop)});el.appendChild(dot)})}' +
-  'if(document.readyState==="complete")run();else window.addEventListener("load",run)})();</script>';
+  'function focusFirst(){var f=document.querySelector("[data-rf-section]");if(!f)return;f.scrollIntoView({block:"center"});f.style.outline="3px solid #2563eb";f.style.outlineOffset="4px";setTimeout(function(){f.style.outline=""},3500)}' +
+  'function go(){run();if(/[?&]focus=1/.test(location.search))setTimeout(focusFirst,400)}' +
+  'if(document.readyState==="complete")go();else window.addEventListener("load",go)})();</script>';
 
 export function injectAnnotations(html: string): string {
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${ANNOTATION_SCRIPT}</body>`) : html + ANNOTATION_SCRIPT;
@@ -120,6 +122,12 @@ export function createPreviewApp(storage: ArtifactStorage) {
         const sharedKey = `${auditId}/target/${relative}`;
         assertSafeKey(sharedKey);
         object = await storage.get(sharedKey);
+      }
+      // Generated images are stored once per audit, outside both variants.
+      if (!object && variant === 'optimised' && relative.startsWith('images/')) {
+        const imageKey = `${auditId}/${relative}`;
+        assertSafeKey(imageKey);
+        object = await storage.get(imageKey);
       }
       if (!object) {
         const isIndex = relative === 'index.html';

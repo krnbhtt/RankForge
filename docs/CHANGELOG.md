@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - gap closure
+- Credits exception: Start-page notice and studio problem card when search or AI credits are used up, `GET /internal/quota` (never spends credits), prepared examples from earlier real runs, retry button, `pnpm exam` exits with code 2 and writes `not_run (credits)`.
+- Image studio (consent-gated, labelled Sample), Workspace screen (stores grouped by hostname, no sign-in yet), Summary and Plan tabs in the studio, scroll-to-first-change in the optimised preview.
+- Docker: worker and preview images build and run; `pnpm record:backup` records the backup demo video.
+- Exit-test kit: `pnpm exam`, `docs/usability-test.md`, `docs/DEMO-RUNBOOK.md`, `docs/deck-updates.md`.
+
 ### Added - Phases 4 to 7 (blueprint, rebuild, studio, hardening)
 - Blueprint: deterministic CRO playbook, model structure advice with a playbook fallback, deterministic arbiter with traceability and anchor verification, below-the-fold alternates.
 - Rebuild: section writer, HTML sanitiser and class whitelist repair, patch applier (server mode and runtime MutationObserver mode), deterministic title, meta, alt text and structured data, verification (script errors, sideways scroll, pixels above insertion with measured noise, buy-button guard, alternate placements, click test), re-scoring with the same functions plus a score without Sample content, evidence attributions.

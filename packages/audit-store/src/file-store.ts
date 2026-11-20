@@ -43,6 +43,8 @@ export interface IAuditStore {
   onAuditChange(auditId: string, callback: (record: AuditRecord) => void): () => void;
   /** Newest completed audit of the same URL (and keyword, when given) created within `maxAgeMs`, or null. */
   findRecentComplete(targetUrl: string, keyword: string | undefined, maxAgeMs: number): Promise<AuditRecord | null>;
+  /** Newest audits first (Workspace and showcase lists). */
+  listAudits(limit: number): Promise<AuditRecord[]>;
 }
 
 /**
@@ -142,6 +144,16 @@ export class FileAuditStore implements IAuditStore {
       images: [],
     };
     await this.writeComposite(composite);
+  }
+
+  async listAudits(limit: number): Promise<AuditRecord[]> {
+    const names = await fs.promises.readdir(this.baseDir).catch(() => [] as string[]);
+    const audits: AuditRecord[] = [];
+    for (const name of names.filter((n) => n.endsWith('.json'))) {
+      const composite = await this.readComposite(name.replace(/\.json$/, ''));
+      if (composite?.audit) audits.push(composite.audit);
+    }
+    return audits.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   }
 
   async findRecentComplete(targetUrl: string, keyword: string | undefined, maxAgeMs: number): Promise<AuditRecord | null> {
@@ -287,9 +299,14 @@ export class FileAuditStore implements IAuditStore {
             }
           }
         });
+        // Windows raises EPERM when the watched file is deleted; drop the watcher and rely on the in-process emitter.
+        watcher.on('error', () => {
+          watcher.close();
+          this.watchers.delete(auditId);
+        });
         this.watchers.set(auditId, watcher);
-      } catch {
-        // Fallback to emitter only
+      } catch (err) {
+        process.stderr.write(`${JSON.stringify({ level: 'warn', msg: 'audit file watch unavailable, using in-process events only', auditId, error: String(err) })}\n`);
       }
     }
 

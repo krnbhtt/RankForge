@@ -108,3 +108,12 @@ This document tracks known issues, technical risks, environment limitations, and
 
 ### 18. Watch-mode restarts kill a running audit
 - Editing worker code under `tsx watch` restarts the process mid-run. Use `POST /api/audits/{id}/retry` to resume.
+
+### 19. Deployment and the unseen-URL exam are waiting on external access
+- gcloud is installed but not signed in and no project id is set; search credits are used up until the daily renewal. Run `pnpm exam --resume` after renewal.
+
+### 20. The Phase 6 test with real people is not done
+- Only a proxy test was run (see `usability-test.md`). Five people must run it before the criterion can be called met.
+
+### 21. The Workspace has no sign-in
+- It lists every store on this installation. Google sign-in needs a Firebase project.

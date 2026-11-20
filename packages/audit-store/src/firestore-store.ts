@@ -44,6 +44,11 @@ export class FirestoreAuditStore implements IAuditStore {
     await this.audit(record.auditId).set({ ...record, ownerUid: record.userId });
   }
 
+  async listAudits(limit: number): Promise<AuditRecord[]> {
+    const snap = await this.db.collection('audits').orderBy('createdAt', 'desc').limit(limit).get();
+    return snap.docs.map((d) => stripOwner(d.data()));
+  }
+
   async findRecentComplete(targetUrl: string, keyword: string | undefined, maxAgeMs: number): Promise<AuditRecord | null> {
     // Equality filter only (no composite index needed); the rest is filtered here.
     const snap = await this.db.collection('audits').where('targetUrl', '==', targetUrl).limit(25).get();

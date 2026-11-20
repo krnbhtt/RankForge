@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AuditError, AuditStatus } from '@rankforge/schema';
 import { usePreviewOrigin } from '@/hooks/use-preview-origin';
+import { PreparedExamples, quotaMessage, useShowcase } from '@/components/credits';
 
 export const PREVIEW_ORIGIN = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN ?? 'http://localhost:4060';
 
@@ -133,23 +134,64 @@ function HtmlPasteForm({ auditId }: { auditId: string }) {
   );
 }
 
+function RetryButton({ auditId }: { auditId: string }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [problem, setProblem] = useState<string | null>(null);
+  const retry = async () => {
+    setState('sending');
+    setProblem(null);
+    try {
+      const res = await fetch(`/api/audits/${encodeURIComponent(auditId)}/retry`, { method: 'POST' });
+      const json = (await res.json()) as { success: boolean; error?: AuditError };
+      if (!res.ok || !json.success) {
+        setProblem(json.error ? `${json.error.message} ${json.error.recoveryAction}` : 'Could not retry. Please try again.');
+        setState('idle');
+        return;
+      }
+      setState('sent');
+    } catch {
+      setProblem('We could not reach the server. Check your connection and try again.');
+      setState('idle');
+    }
+  };
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={retry}
+        disabled={state !== 'idle'}
+        className="min-h-[44px] rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {state === 'sending' ? 'Retrying…' : state === 'sent' ? 'Retry started' : 'Try again'}
+      </button>
+      {problem && (
+        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ProblemCard({ auditId, status, error }: { auditId: string; status: AuditStatus; error?: AuditError }) {
   const blocked = status === 'blocked';
+  const examples = useShowcase();
+  const quota = error?.code === 'QuotaError' ? quotaMessage(String((error.details as Record<string, unknown> | undefined)?.service ?? '')) : null;
   return (
-    <div className="h-full flex items-center justify-center p-6">
+    <div className="h-full overflow-y-auto flex items-start justify-center p-6">
       <div className="max-w-lg w-full space-y-4 text-center">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          {blocked ? 'This store would not let us open the page' : 'We could not rebuild this page'}
+          {quota ? quota.title : blocked ? 'This store would not let us open the page' : 'We could not rebuild this page'}
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          {error?.message ?? 'Something went wrong while opening the page.'}
-        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{quota ? quota.body : (error?.message ?? 'Something went wrong while opening the page.')}</p>
         {blocked ? (
           <HtmlPasteForm auditId={auditId} />
         ) : (
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-            {error?.recoveryAction ?? 'Start a new audit to try again.'}
-          </p>
+          <>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{error?.recoveryAction ?? 'Start a new audit to try again.'}</p>
+            {!quota && <RetryButton auditId={auditId} />}
+            {quota && <PreparedExamples items={examples} heading="Open a prepared example instead" />}
+          </>
         )}
       </div>
     </div>
@@ -239,7 +281,7 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
     <div className="flex flex-col flex-1 h-full min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800 text-xs">
         <div className="min-w-0 flex items-center gap-2">
-          <span className="font-semibold text-slate-800 dark:text-slate-200">Your page</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">Before: your page</span>
           {targetUrl && (
             <span className="truncate max-w-[240px] font-mono text-slate-500 hidden sm:inline" title={targetUrl}>
               {targetUrl}
@@ -298,7 +340,7 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
           >
             {linkCopied ? 'Link copied' : 'Copy preview link'}
           </button>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">Optimised version</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">After: optimised (scrolls to the first change)</span>
         </div>
       </div>
 
@@ -320,7 +362,7 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
           {ready ? (
             <PreviewFrame
               title="The optimised product page"
-              src={`${previewUrl(auditId, 'optimised', previewOrigin)}?v=${encodeURIComponent(optimisedVersion)}&annotate=${annotate ? 1 : 0}`}
+              src={`${previewUrl(auditId, 'optimised', previewOrigin)}?v=${encodeURIComponent(optimisedVersion)}&annotate=${annotate ? 1 : 0}${status === 'complete' ? '&focus=1' : ''}`}
               viewport={viewport}
               frameRef={rightRef as React.RefObject<HTMLIFrameElement>}
             />

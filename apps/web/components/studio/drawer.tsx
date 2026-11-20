@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { AuditReportBundle } from '@/hooks/use-audit-report';
 import { CategoryPanel, QueriesPanel, SchemaPanel } from './panels';
+import { PlanPanel, SummaryPanel } from './summary';
 import type {
   AuditRecord,
   AuditCompetitor,
@@ -22,7 +23,7 @@ export interface StudioDrawerProps {
   bundle?: AuditReportBundle | null;
 }
 
-type TabType = 'scores' | 'findings' | 'queries' | 'competitors' | 'schema' | 'category';
+type TabType = 'summary' | 'plan' | 'scores' | 'findings' | 'queries' | 'competitors' | 'schema' | 'category';
 
 const VISIBILITY_FACTORS: { key: string; label: string; max: number }[] = [
   { key: 'product_schema', label: 'Product structured data', max: 25 },
@@ -88,8 +89,10 @@ export function StudioDrawer({
   findings = [],
   queries = [],
   bundle = null,
+  blueprint = [],
+  patches = [],
 }: StudioDrawerProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('scores');
+  const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [isOpen, setIsOpen] = useState<boolean>(true);
   const prevWidthRef = useRef<number>(typeof window !== 'undefined' ? window.innerWidth : 1440);
 
@@ -176,6 +179,8 @@ export function StudioDrawer({
       <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 overflow-x-auto text-xs font-medium">
         {(
           [
+            ['summary', 'Summary'],
+            ['plan', 'Plan'],
             ['scores', 'Scores'],
             ['findings', 'Findings'],
             ['queries', 'Queries'],
@@ -200,6 +205,9 @@ export function StudioDrawer({
 
       {/* Tab Panels */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        {activeTab === 'summary' && <SummaryPanel audit={audit} findings={findings} patches={patches} bundle={bundle ?? null} />}
+        {activeTab === 'plan' && <PlanPanel blueprint={blueprint} patches={patches} bundle={bundle ?? null} />}
+
         {/* 1. Scores Tab */}
         {activeTab === 'scores' && (
           <div className="space-y-4">
@@ -235,6 +243,10 @@ export function StudioDrawer({
                 </span>
               </div>
             </div>
+
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              Visibility is how findable the page is, Conversion is how well it turns visitors into buyers, and the overall score is Visibility times Conversion divided by 100, so a weak side pulls the whole score down.
+            </p>
 
             {optimized && (
               <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1" role="note">

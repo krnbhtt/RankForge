@@ -8,6 +8,8 @@ import {
 } from '@rankforge/schema';
 import { featureFlags } from '@rankforge/config';
 import { tasksRouter } from './routes/tasks.js';
+import { fetchSerpCredits } from './competitors/serp.js';
+import { modelAvailability } from './ai/gemini.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4050;
@@ -47,6 +49,14 @@ app.get('/healthz', (_req: Request, res: Response) => {
       costCapInr: featureFlags.COST_CAP_INR,
     },
   });
+});
+
+// Credits and model availability, shown by the studio before a judge starts a run. Costs nothing to call.
+app.get('/internal/quota', async (_req: Request, res: Response) => {
+  const serp = await fetchSerpCredits();
+  const gemini = modelAvailability();
+  const geminiOk = Boolean(process.env.GEMINI_API_KEY) && gemini.every((g) => g.models.some((m) => m.available));
+  res.status(200).json({ serp, gemini, geminiConfigured: Boolean(process.env.GEMINI_API_KEY), geminiOk });
 });
 
 // Task: Scrape Target Page & Extract AST

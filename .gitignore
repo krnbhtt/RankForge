@@ -46,3 +46,4 @@ pnpm-debug.log*
 next-env.d.ts
 .chromium-install.log
 .logs/
+docs/demo/*.webm

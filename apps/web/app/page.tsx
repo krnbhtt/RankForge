@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ArrowRight, Sparkles, ShieldCheck, AlertCircle } from 'lucide-react';
+import { CreditsNotice, PreparedExamples, useQuota, useShowcase } from '@/components/credits';
 
 export default function StartPage() {
   const router = useRouter();
@@ -12,23 +14,8 @@ export default function StartPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sampleUrls = [
-    {
-      label: 'Ceramic Pour Over Dripper',
-      url: 'https://example.com/products/ceramic-pour-over-dripper',
-      kw: 'ceramic pour over dripper',
-    },
-    {
-      label: 'Leather Messenger Bag',
-      url: 'https://example.com/products/vintage-leather-messenger-bag',
-      kw: 'leather messenger bag',
-    },
-    {
-      label: 'Noise-Cancelling Headphones',
-      url: 'https://example.com/products/wireless-over-ear-headphones',
-      kw: 'wireless noise cancelling headphones',
-    },
-  ];
+  const quota = useQuota();
+  const examples = useShowcase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +67,8 @@ export default function StartPage() {
           </p>
         </div>
 
+        <CreditsNotice quota={quota} />
+
         {/* Start Form Container */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
           {error && (
@@ -103,24 +92,6 @@ export default function StartPage() {
                 onChange={(e: any) => setUrl(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 min-h-[44px]"
               />
-            </div>
-
-            {/* Quick Sample URL Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-xs text-slate-500">Quick Test:</span>
-              {sampleUrls.map((s, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setUrl(s.url);
-                    setKeyword(s.kw);
-                  }}
-                  className="px-2 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition border border-slate-200 dark:border-slate-700"
-                >
-                  {s.label}
-                </button>
-              ))}
             </div>
 
             <div>
@@ -147,7 +118,7 @@ export default function StartPage() {
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
               <label htmlFor="image-consent" className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
-                Consent to AI-generated product photography enhancement (Imagen 3) if studio lighting or visual CRO deficits are detected.
+                Also generate improved product images. They are made with AI, shown only in the preview, and always labelled Sample. Optional.
               </label>
             </div>
 
@@ -172,6 +143,10 @@ export default function StartPage() {
             <span>Sandboxed preview isolation & SSRF protected</span>
           </div>
         </div>
+        <PreparedExamples items={examples} />
+        <p className="text-xs text-slate-500">
+          Looking after several stores? <Link href="/workspace" className="font-medium text-blue-700 underline dark:text-blue-300">Open the workspace</Link>
+        </p>
       </div>
     </main>
   );

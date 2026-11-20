@@ -22,6 +22,18 @@ const cooldownUntil = new Map<string, number>();
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const SLOW_COOLDOWN_MS = 5 * 60_000;
 
+/** Which models in each chain are usable right now (a model that recently ran out of quota is cooling down). */
+export function modelAvailability(): { role: string; models: { model: string; available: boolean; retryAfterMinutes: number }[] }[] {
+  const now = Date.now();
+  return (Object.keys(MODEL_CHAINS) as ModelRole[]).map((role) => ({
+    role,
+    models: MODEL_CHAINS[role].map((model) => {
+      const until = cooldownUntil.get(model) ?? 0;
+      return { model, available: until <= now, retryAfterMinutes: until > now ? Math.ceil((until - now) / 60_000) : 0 };
+    }),
+  }));
+}
+
 /** Test hook: forget all cooldowns. */
 export function resetModelCooldowns(): void {
   cooldownUntil.clear();
@@ -48,6 +60,11 @@ export class SpendTracker {
     this.spent += (inputTokens * rate.input + outputTokens * rate.output) / 1_000_000;
   }
 
+  /** Adds a fixed estimated cost (for example one generated image). */
+  addFlat(inr: number): void {
+    this.spent += inr;
+  }
+
   get totalInr(): number {
     return Math.round(this.spent * 100) / 100;
   }
@@ -57,6 +74,7 @@ export class SpendTracker {
       throw new QuotaError(`This audit reached its spending limit of ₹${this.capInr}.`, {
         spentInr: this.totalInr,
         capInr: this.capInr,
+        service: 'budget',
       });
     }
   }
@@ -176,7 +194,7 @@ async function callWithBackoff(
     });
   } catch (err) {
     if (err instanceof RetriableHttpError) {
-      if (err.status === 429) throw new QuotaError('The AI service is busy right now.', { status: 429 });
+      if (err.status === 429) throw new QuotaError('The AI service quota is used up for now.', { status: 429, service: 'gemini' });
       throw new UpstreamModelError('The AI service is temporarily unavailable.', { status: err.status });
     }
     if (err instanceof Error && /timeout|aborted|fetch failed/i.test(err.message)) {

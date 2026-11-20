@@ -23,6 +23,9 @@ import { patchesKey, runRebuildStage, type RebuildResult } from '../stages/rebui
 import { analysisKey } from '../stages/analysis-stage.js';
 import type { PatchOp } from '@rankforge/schema';
 import { runVerifyStage } from '../stages/verify-stage.js';
+import { runImageStudio } from '../rebuild/image-studio.js';
+import { ConsensusModelSchema } from '@rankforge/schema';
+import { consensusKey } from '../stages/competitors-stage.js';
 
 export interface TaskRunnerDeps {
   capture: typeof captureTarget;
@@ -145,7 +148,10 @@ export function createTasksRouter(deps: TaskRunnerDeps): ReturnType<typeof Route
         rebuild = { mode: saved.mode, ops: saved.ops, applied: saved.ops.filter((o) => !failedIds.has(o.sectionId)), dropped: saved.dropped };
         log('info', 'resuming: rebuild already done', { auditId, stage: 'run' });
       } else {
-        rebuild = await runRebuildStage({ store, storage, spend, logger: log }, blueprinted, target, blueprint);
+        const consensus = ConsensusModelSchema.parse(JSON.parse((await storage.get(consensusKey(auditId)))?.body.toString('utf8') ?? '{}'));
+        const gallery = target.components.find((c) => c.kind === 'gallery');
+        const images = await runImageStudio({ store, storage, spend, logger: log }, blueprinted, target, consensus, gallery?.selector);
+        rebuild = await runRebuildStage({ store, storage, spend, logger: log, extraOps: images.ops }, blueprinted, target, blueprint);
       }
       const rebuilt = (await store.getAudit(auditId)) ?? blueprinted;
       await runVerifyStage({ store, storage, logger: log }, rebuilt, target, rebuild, blueprint);
