@@ -9,7 +9,6 @@ export async function enqueueAuditTask(payload: RunAuditTaskInput): Promise<void
     try {
       // Dynamic import to avoid missing module crash in offline environments
       const tasksPackage = '@google-cloud/tasks';
-      // @ts-ignore
       const { CloudTasksClient } = await import(/* webpackIgnore: true */ tasksPackage);
       const client = new CloudTasksClient();
       const location = process.env.TASKS_LOCATION || 'asia-south1';

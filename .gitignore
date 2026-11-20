@@ -40,3 +40,7 @@ pnpm-debug.log*
 
 .data/
 
+
+# TypeScript incremental build info and Next.js generated types
+*.tsbuildinfo
+next-env.d.ts

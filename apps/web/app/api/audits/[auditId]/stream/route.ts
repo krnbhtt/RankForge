@@ -52,7 +52,9 @@ export async function GET(
           cleanup();
           try {
             controller.close();
-          } catch {}
+          } catch (err) {
+            console.warn(JSON.stringify({ level: "warn", msg: "stream controller already closed", err: String(err) }));
+          }
           isClosed = true;
         }
       });

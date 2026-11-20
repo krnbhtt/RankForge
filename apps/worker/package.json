@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@google/genai": "^0.2.0",
+    "@google/genai": "^3.6.1",
     "@rankforge/config": "workspace:*",
     "@rankforge/schema": "workspace:*",
     "@rankforge/scoring": "workspace:*",

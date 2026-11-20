@@ -24,8 +24,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "composite": true,
-    "types": [],
+    "composite": false,
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
       "@rankforge/schema": ["./packages/schema/src/index.ts"],
