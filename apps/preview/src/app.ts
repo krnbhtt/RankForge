@@ -14,8 +14,23 @@ const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
   'Cross-Origin-Resource-Policy': 'cross-origin',
+  'Access-Control-Allow-Origin': '*',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
 };
+
+/**
+ * Scroll bridge injected into served HTML (never stored). The studio embeds two previews on a
+ * different origin and cannot read their scroll position, so each page reports and accepts a
+ * 0..1 scroll ratio via postMessage.
+ */
+export const SCROLL_SYNC_SCRIPT =
+  '<script data-rf-sync>(function(){var lock=false,t;function max(){var d=document.documentElement;return d.scrollHeight-window.innerHeight}' +
+  "addEventListener('scroll',function(){if(lock)return;var m=max();parent.postMessage({source:'rf-preview',type:'scroll',ratio:m>0?window.scrollY/m:0},'*')},{passive:true});" +
+  "addEventListener('message',function(e){var d=e.data;if(!d||d.source!=='rf-studio'||d.type!=='scroll-to')return;lock=true;window.scrollTo(0,d.ratio*max());clearTimeout(t);t=setTimeout(function(){lock=false},80)})})();</script>";
+
+export function injectScrollSync(html: string): string {
+  return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${SCROLL_SYNC_SCRIPT}</body>`) : html + SCROLL_SYNC_SCRIPT;
+}
 
 const NOT_READY_HTML = (title: string, body: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>` +
@@ -96,7 +111,7 @@ export function createPreviewApp(storage: ArtifactStorage) {
       const isHtml = relative.endsWith('.html');
       res.setHeader('Content-Type', object.contentType || contentTypeForKey(relative));
       res.setHeader('Cache-Control', isHtml ? 'no-store' : 'public, max-age=86400, immutable');
-      res.status(200).send(object.body);
+      res.status(200).send(isHtml && relative === 'index.html' ? injectScrollSync(object.body.toString('utf8')) : object.body);
       logRequest({ auditId, variant, path: relative, status: 200, durationMs: Date.now() - started });
     } catch (err) {
       logRequest({

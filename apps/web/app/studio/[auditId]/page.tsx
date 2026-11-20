@@ -77,9 +77,11 @@ export default function StudioPage({ params }: { params: { auditId: string } }) 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Synced Bi-Directional Split View Preview */}
         <StudioPreviewContainer
+          auditId={auditId}
           status={status}
+          stage={stage}
           targetUrl={audit?.targetUrl}
-          patches={patches}
+          error={audit?.error}
         />
 
         {/* Collapsible 6-Tab Insights Drawer */}

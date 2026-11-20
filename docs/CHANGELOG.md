@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 1 / T10-T13: HTML paste, rf-preview, studio iframes, job-flow wiring
+- `POST /api/audits/{id}/html` (blocked or failed audits only): stores the pasted HTML and re-queues; capture reuses the same pipeline.
+- `apps/preview` (`rf-preview`, port 4060): serves `/preview/{auditId}/{current|optimised}/` with `X-Robots-Tag: noindex`, traversal-safe keys, a scroll-sync bridge injected at serve time.
+- Studio preview rewritten: sandboxed side-by-side iframes, synchronised scroll over postMessage, desktop/mobile toggle, capture skeleton, and a blocked-page recovery card with the HTML paste form. The Phase 0 hard-coded preview mock is removed.
+- Worker job flow runs the real capture stage (checkpointed, resumable, `blocked`/`failed` with typed errors); later stages are still the Phase 0 stub.
+- Fixed: Next.js could not resolve NodeNext `.js` imports to `.ts` sources (`extensionAlias` added).
+- Verified live against a public Shopify store: 205 assets proxied, 20 to 24 s end to end (see KNOWN_ISSUES 10).
+
 ### Added - Phase 1 / T3-T9: capture engine (`apps/worker/src/capture`, `src/extract`)
 - `@rankforge/storage`: `ArtifactStorage` with local-disk and GCS adapters (`createStorageFromEnv`); keys are validated against traversal.
 - `captureTarget`: Playwright Chromium render at 390 px and 1440 px, lazy-load scroll, 45 s timeout with one retry without images, `BlockedSiteError` for 401/403/429/5xx, empty bodies and bot-challenge pages, final-URL SSRF re-check.

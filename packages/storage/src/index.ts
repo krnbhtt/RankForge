@@ -138,8 +138,19 @@ export class GcsStorage implements ArtifactStorage {
   }
 }
 
-/** Chooses GCS when BUCKET is set, otherwise local disk under ARTIFACT_DIR (default `.data/artifacts`). */
+/** Walks up from `start` to the directory holding pnpm-workspace.yaml so every service shares one dev store. */
+export function findRepoRoot(start: string = process.cwd()): string {
+  let dir = path.resolve(start);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.resolve(start);
+    dir = parent;
+  }
+}
+
+/** Chooses GCS when BUCKET is set, otherwise local disk under ARTIFACT_DIR (default `<repo>/.data/artifacts`). */
 export function createStorageFromEnv(env: NodeJS.ProcessEnv = process.env): ArtifactStorage {
   if (env.BUCKET) return new GcsStorage(env.BUCKET);
-  return new LocalDiskStorage(env.ARTIFACT_DIR ?? path.resolve(process.cwd(), '.data/artifacts'));
+  return new LocalDiskStorage(env.ARTIFACT_DIR ?? path.join(findRepoRoot(), '.data', 'artifacts'));
 }

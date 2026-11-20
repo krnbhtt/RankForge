@@ -94,3 +94,19 @@ describe('rf-preview', () => {
     expect(await res.text()).not.toContain('secret');
   });
 });
+
+describe('scroll sync bridge', () => {
+  it('is injected into served HTML but not stored in the snapshot', async () => {
+    const res = await get('/preview/aud1/current/');
+    const html = await res.text();
+    expect(html).toContain('data-rf-sync');
+    expect(html.indexOf('data-rf-sync')).toBeLessThan(html.indexOf('</body>'));
+    const stored = (await storage.get('aud1/target/index.html'))?.body.toString('utf8');
+    expect(stored).not.toContain('data-rf-sync');
+  });
+
+  it('allows cross-origin font and asset loading from the sandboxed studio frame', async () => {
+    const res = await get('/preview/aud1/current/assets/abc.css');
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+});

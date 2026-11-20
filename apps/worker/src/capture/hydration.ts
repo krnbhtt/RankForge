@@ -67,7 +67,7 @@ export async function sentinelSurvives(options: SurvivalOptions): Promise<boolea
     });
     await page.route((u) => u.origin !== SNAPSHOT_HOST, (route) => route.abort('blockedbyclient'));
     await page.goto(`${SNAPSHOT_HOST}/index.html`, { waitUntil: 'load', timeout: options.timeoutMs ?? 12000 });
-    await page.waitForTimeout(options.settleMs ?? 1500);
+    await page.waitForTimeout(options.settleMs ?? 800);
     return await page.evaluate(
       ({ attr, text }) => {
         const el = document.querySelector(`[${attr}]`);

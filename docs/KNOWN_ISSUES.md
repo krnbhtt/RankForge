@@ -80,3 +80,8 @@ This document tracks known issues, technical risks, environment limitations, and
 ### 9. DNS rebinding window
 - Chromium resolves hostnames itself, so a host that passes the SSRF check could in theory re-resolve to a private address before connecting. Mitigated by checking every request and redirect hop; full pinning would need a proxy.
 
+### 10. Reproduction time is at the 20 s budget on heavy stores (2026-11-20)
+- **Status**: OPEN. A live Allbirds page took 20 to 24 s (render about 15 s). The studio now shows the page as soon as the snapshot is stored, which is a few seconds earlier. Further options: skip the mobile render until after the preview is visible, move screenshots off the critical path.
+- Store modals (for example a country picker) are captured as shown; a dismissal step is not implemented.
+- Not yet verified: Firestore-backed status (the file store is still used), Docker worker image, the 90% corpus exit criterion.
+

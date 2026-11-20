@@ -7,7 +7,7 @@
 export const AUTO_SCROLL_SCRIPT = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const step = Math.max(400, Math.floor(window.innerHeight * 0.8));
-  const deadline = Date.now() + 6000;
+  const deadline = Date.now() + 4000;
   let y = 0;
   let lastHeight = 0;
   while (Date.now() < deadline) {

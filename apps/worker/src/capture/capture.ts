@@ -95,7 +95,7 @@ async function settle(page: Page, logger: Logger, auditId: string): Promise<void
   await page.waitForLoadState('load', { timeout: 12_000 }).catch((err: Error) => {
     logger('warn', 'load state not reached; continuing', { auditId, stage: 'capture', error: err.message });
   });
-  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {
+  await page.waitForLoadState('networkidle', { timeout: 2_500 }).catch(() => {
     logger('debug', 'network never went idle; continuing', { auditId, stage: 'capture' });
   });
 }
