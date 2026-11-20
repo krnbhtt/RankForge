@@ -85,3 +85,14 @@ This document tracks known issues, technical risks, environment limitations, and
 - Store modals (for example a country picker) are captured as shown; a dismissal step is not implemented.
 - Not yet verified: Firestore-backed status (the file store is still used), Docker worker image, the 90% corpus exit criterion.
 
+### 11. Gemini key limits (2026-11-20)
+- Free tier: 20 requests per day per model. Gemini 3.1 Pro and Search Grounding have no quota. The fallback chain keeps the pipeline running on Flash-class models; rate-limit errors appear in logs as "model unavailable". A billed key removes this.
+
+### 12. Consensus entities are matched by exact normalised phrase
+- Few entities reach the "4+ competitors" bar, so the entity score is often low. Fix: cluster similar phrases before counting.
+
+### 13. Studio panels still contain Phase 0 mock content
+- Schema, Category and part of the Queries panels, and the right preview pane, still use Phase 0 mock content or placeholders. They are replaced in Phase 6 (and Phase 5 for the optimised page). Scores and the Findings and Competitors tabs show real data.
+
+### 14. Worker image
+- The Docker image cannot run as written (workspace packages export TypeScript source) and could not be built here because the Docker daemon hangs.

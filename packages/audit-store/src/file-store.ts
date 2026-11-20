@@ -115,7 +115,17 @@ export class FileAuditStore implements IAuditStore {
     const tmpPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).substring(2, 8)}`;
     const data = JSON.stringify(composite, null, 2);
     await fs.promises.writeFile(tmpPath, data, 'utf8');
-    await fs.promises.rename(tmpPath, filePath);
+    // On Windows a rename can fail briefly while antivirus or a watcher holds the target; retry a few times.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await fs.promises.rename(tmpPath, filePath);
+        break;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (attempt >= 6 || (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES')) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
+      }
+    }
     this.emitter.emit(`change:${composite.audit.auditId}`, composite.audit);
   }
 

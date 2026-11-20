@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 2 (competitors) and Phase 3 (analysis)
+- `ai/gemini.ts`: schema-validated JSON calls (retry once with the error, then fail the stage), backoff with jitter, per-audit spend cap, a model fallback chain with cooldowns (the key has small per-model daily quotas), seeded calls.
+- Competitors: SERP client (SearchAPI.io, Google redirect links resolved, widened with related searches), AI-cited source discovery (degrades gracefully without grounding quota), parallel competitor capture (5 sessions, 25 s budget, skip and backfill), competitor profiles, deterministic consensus model, batched entity extraction, keyword resolution.
+- Analysis: Product schema audit, on-page audit, PageSpeed Insights with a local lab fallback, entity and query gap with code-verified claims, visual CRO audit, tone and trust, taxonomy-validated category, findings with evidence, baseline scores (unmeasured metrics rescaled, not zeroed).
+- Worker job flow now runs capture, competitors and analysis for real; blueprint, rebuild and verify are still the Phase 0 stub.
+- Studio: removed hard-coded demo scores, factor bars, competitors and ratings from the insights drawer; scores show "Not built yet" until the optimised page is scored.
+- Corpus scripts: `scripts/corpus/phase2.ts`, `phase3.ts`.
+- Reports: `docs/phases/PHASE-2-REPORT.md`, `PHASE-3-REPORT.md`.
+
 ### Added - Phase 1 / T0: Firestore audit store, corpus runner (T14), Phase 1 report (T15)
 - `@rankforge/audit-store`: one `IAuditStore` with file and Firestore implementations (transactional updates, deterministic document ids, `ownerUid` for the security rules). Selected by `FIRESTORE_EMULATOR_HOST` or `AUDIT_STORE=firestore`; the worker and web app both use it. `firebase.json` and `firestore.rules` added for the local emulator.
 - `pnpm corpus`: capture, offline reload, pixel diff, interaction check; writes `docs/corpus-results.csv`. See `docs/phases/PHASE-1-REPORT.md` (exit criterion not met: 12 of 18, 66.7%).

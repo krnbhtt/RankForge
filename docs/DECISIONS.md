@@ -57,3 +57,21 @@ Accepted (2026-11-20)
 5. **Hydration mode** is decided empirically: sentinel edits are placed in the snapshot HTML before scripts run and checked after load; framework markers are only the fallback.
 6. **Storage:** local-disk adapter by default, GCS when `BUCKET` is set (emulator via `STORAGE_EMULATOR_HOST`).
 
+## ADR-003: Model access, fallbacks and measurement choices (Phases 2 and 3)
+
+### Status
+Accepted (2026-11-20)
+
+### Context
+The supplied Gemini key is on the free tier: 20 requests per day per model, no quota for Gemini 3.1 Pro or Search Grounding, and PageSpeed Insights rejects API keys. The Cloud Natural Language API has no credentials.
+
+### Decisions
+1. **Model fallback chain** per role with a 30-minute cooldown for models that are out of quota, so one exhausted model does not slow every call. Pro-role calls fall back to Flash-class models. Spend is estimated from token counts and capped per audit (`COST_CAP_INR`).
+2. **Grounding unavailable is not fatal:** AI-cited sources are skipped and the studio is told why.
+3. **Core Web Vitals** come from PageSpeed Insights when available, otherwise from our own mobile Chromium (lab, unthrottled). A metric that cannot be measured is excluded and the score rescaled.
+4. **Model claims are verified in code** before they affect scores (entities by word match, answers by quote match). Analysis calls use temperature 0 and a seed.
+5. **The question journey is fixed to SERP questions** so the score cannot move with invented questions.
+6. **Capture hides pop-ups** (overlay neutraliser) so snapshots and diffs show the product, not a transient modal.
+
+### Consequences
+Quality is below the specification's intent where Pro-tier or NL API models were specified. With a billed key and a PageSpeed credential the same code uses them without changes (set `GEMINI_MODEL_PRO`, `PSI_API_KEY`).

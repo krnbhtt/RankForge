@@ -21,6 +21,64 @@ export interface StudioDrawerProps {
 
 type TabType = 'scores' | 'findings' | 'queries' | 'competitors' | 'schema' | 'category';
 
+const VISIBILITY_FACTORS: { key: string; label: string; max: number }[] = [
+  { key: 'product_schema', label: 'Product structured data', max: 25 },
+  { key: 'entity_coverage', label: 'Attributes competitors cover', max: 20 },
+  { key: 'core_web_vitals', label: 'Page speed (Core Web Vitals)', max: 20 },
+  { key: 'query_sequence_coverage', label: 'Shopper questions answered', max: 15 },
+  { key: 'on_page_structure', label: 'Title, headings and meta', max: 10 },
+  { key: 'image_seo', label: 'Image SEO', max: 10 },
+];
+
+const CONVERSION_FACTORS: { key: string; label: string; max: number }[] = [
+  { key: 'add_to_cart', label: 'Add-to-cart experience', max: 25 },
+  { key: 'delivery_payment_returns', label: 'Delivery, payment and returns', max: 20 },
+  { key: 'trust_and_proof', label: 'Reviews and trust', max: 20 },
+  { key: 'price_and_offer_clarity', label: 'Price and offer clarity', max: 15 },
+  { key: 'friction_and_mobile_usability', label: 'Mobile friction', max: 20 },
+];
+
+function FactorBars({
+  title,
+  breakdown,
+  factors,
+}: {
+  title: string;
+  breakdown: Record<string, number>;
+  factors: { key: string; label: string; max: number }[];
+}) {
+  return (
+    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
+      <div className="font-semibold text-slate-900 dark:text-slate-100">{title}</div>
+      <div className="space-y-2">
+        {factors.map((f) => {
+          const points = breakdown[f.key] ?? 0;
+          return (
+            <div key={f.key}>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span>{f.label}</span>
+                <span className="font-medium">
+                  {points} / {f.max} pts
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label={f.label}
+                aria-valuenow={points}
+                aria-valuemin={0}
+                aria-valuemax={f.max}
+                className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"
+              >
+                <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(100, (points / f.max) * 100)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function StudioDrawer({
   audit,
   competitors = [],
@@ -175,7 +233,7 @@ export function StudioDrawer({
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">Visibility</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {visBefore ?? '—'} &rarr; <span className="text-blue-600">{visAfter ?? '—'}</span>
+                  {visBefore ?? 'â€”'} &rarr; <span className="text-blue-600">{visAfter ?? 'â€”'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
                   {visDelta !== undefined ? `+${visDelta} pts` : 'Not built yet'}
@@ -185,7 +243,7 @@ export function StudioDrawer({
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">Conversion</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {convBefore ?? '—'} &rarr; <span className="text-blue-600">{convAfter ?? '—'}</span>
+                  {convBefore ?? 'â€”'} &rarr; <span className="text-blue-600">{convAfter ?? 'â€”'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
                   {convDelta !== undefined ? `+${convDelta} pts` : 'Not built yet'}
@@ -195,7 +253,7 @@ export function StudioDrawer({
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] text-slate-500 font-medium uppercase">PPI Index</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-slate-100 my-0.5">
-                  {ppiBefore ?? '—'} &rarr; <span className="text-blue-600">{ppiAfter ?? '—'}</span>
+                  {ppiBefore ?? 'â€”'} &rarr; <span className="text-blue-600">{ppiAfter ?? 'â€”'}</span>
                 </div>
                 <span className="inline-block text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.2 rounded">
                   {ppiDelta !== undefined ? `+${ppiDelta} pts` : 'Not built yet'}
@@ -203,77 +261,14 @@ export function StudioDrawer({
               </div>
             </div>
 
-            {/* Score Breakdown Progress Bars */}
-            <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
-              <div className="font-semibold text-slate-900 dark:text-slate-100">Visibility Factors</div>
-              <div className="space-y-2">
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>Structured Schema (JSON-LD)</span>
-                    <span className="font-medium">24 / 25 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '96%' }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>Consensus Semantic Entities</span>
-                    <span className="font-medium">18 / 20 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '90%' }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>Core Web Vitals & Speed</span>
-                    <span className="font-medium">17 / 20 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '85%' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Conversion Breakdown Progress Bars */}
-            <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
-              <div className="font-semibold text-slate-900 dark:text-slate-100">Conversion Factors</div>
-              <div className="space-y-2">
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>Above-the-Fold ATC & Sticky CTA</span>
-                    <span className="font-medium">23 / 25 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-600 h-full rounded-full" style={{ width: '92%' }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>India Trust & Payment Signals</span>
-                    <span className="font-medium">18 / 20 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-600 h-full rounded-full" style={{ width: '90%' }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] mb-1">
-                    <span>MRP & Pricing Transparency</span>
-                    <span className="font-medium">10 / 15 pts</span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-600 h-full rounded-full" style={{ width: '66%' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
+            {baseline ? (
+              <>
+                <FactorBars title="Visibility factors" breakdown={baseline.visibility.breakdown} factors={VISIBILITY_FACTORS} />
+                <FactorBars title="Conversion factors" breakdown={baseline.conversion.breakdown} factors={CONVERSION_FACTORS} />
+              </>
+            ) : (
+              <p className="text-xs text-slate-600 dark:text-slate-400">Scores appear here once your page has been analysed.</p>
+            )}
 
             {/* Evidence Attributions Section (Spec Â§7.4 & R3) */}
             <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-3">
@@ -476,46 +471,22 @@ export function StudioDrawer({
         {/* 4. Competitors Tab */}
         {activeTab === 'competitors' && (
           <div className="space-y-3">
-            <div className="text-[11px] text-slate-500">Top 10 Google Organic Competitors</div>
-            {(competitors.length > 0
-              ? competitors
-              : [
-                  {
-                    competitorId: 'c1',
-                    rank: 1,
-                    title: 'Blue Bottle Pour Over Dripper',
-                    url: 'https://bluebottlecoffee.com',
-                    rating: 4.8,
-                    reviews: 512,
-                    trustSignals: ['Free Shipping', 'COD'],
-                  },
-                  {
-                    competitorId: 'c2',
-                    rank: 2,
-                    title: 'Hario V60 Ceramic Dripper 02',
-                    url: 'https://hario-usa.com',
-                    rating: 4.9,
-                    reviews: 1240,
-                    trustSignals: ['Japanese Porcelain', 'UPI'],
-                  },
-                  {
-                    competitorId: 'c3',
-                    rank: 3,
-                    title: 'Fellow Stagg [X] Dripper Set',
-                    url: 'https://fellowproducts.com',
-                    rating: 4.7,
-                    reviews: 380,
-                    trustSignals: ['1 Year Warranty'],
-                  },
-                ]
-            ).map((c) => (
+            <div className="text-[11px] text-slate-500">Competitors found for your keyword</div>
+            {competitors.length === 0 && (
+              <p className="text-xs text-slate-600 dark:text-slate-400">Competitors appear here as soon as each page has been read.</p>
+            )}
+            {competitors.map((c) => (
               <div
                 key={c.competitorId}
                 className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-blue-600 text-xs">#{c.rank} Rank</span>
-                  <span className="text-amber-500 font-semibold text-xs">â˜… {c.rating || 4.7}</span>
+                  {c.status === 'skipped' ? (
+                    <span className="text-slate-500 text-xs">Skipped</span>
+                  ) : c.rating ? (
+                    <span className="text-amber-500 font-semibold text-xs">â˜… {c.rating}</span>
+                  ) : null}
                 </div>
                 <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{c.title}</div>
                 <div className="text-[10px] text-slate-500 truncate">{c.url}</div>
