@@ -1,0 +1,26 @@
+{
+  "name": "@rankforge/preview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "rf-preview: serves reproduced store pages on an isolated origin with X-Robots-Tag noindex",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@rankforge/storage": "workspace:*",
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
