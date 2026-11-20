@@ -13,6 +13,14 @@ export interface ArtifactStorage {
   exists(key: string): Promise<boolean>;
 }
 
+/** Object keys for a capture, following the layout in specification section 6.2. */
+export const artifactKeys = {
+  pastedHtml: (auditId: string) => `${auditId}/input/pasted.html`,
+  extraction: (auditId: string) => `${auditId}/target/extraction.json`,
+  targetIndex: (auditId: string) => `${auditId}/target/index.html`,
+  targetScreen: (auditId: string, viewport: 'mobile' | 'desktop') => `${auditId}/target/screens/${viewport}.png`,
+};
+
 const KEY_PATTERN = /^[A-Za-z0-9_\-./]+$/;
 
 /** Rejects keys that could escape the storage root or address hidden files. */

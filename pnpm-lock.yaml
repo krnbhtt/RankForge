@@ -50,6 +50,9 @@ importers:
       '@rankforge/ssrf':
         specifier: workspace:*
         version: link:../../packages/ssrf
+      '@rankforge/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

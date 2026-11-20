@@ -267,6 +267,30 @@ export type ScoreCard = z.infer<typeof ScoreCardSchema>;
 // 8. Top-Level Audit Record (Firestore Document)
 // ==========================================
 
+/** Summary of the target capture, written when the reproduction is ready (spec 4.2 step 2). */
+export const CaptureSummarySchema = z.object({
+  source: z.enum(['live', 'html_paste']),
+  finalUrl: z.string().url(),
+  renderMs: z.number().nonnegative(),
+  snapshotMs: z.number().nonnegative(),
+  analysisMs: z.number().nonnegative(),
+  totalMs: z.number().nonnegative(),
+  assetCount: z.number().int().nonnegative(),
+  hydrationMode: z.enum(['server', 'runtime']),
+  imagesDisabled: z.boolean(),
+  title: z.string(),
+});
+export type CaptureSummary = z.infer<typeof CaptureSummarySchema>;
+
+/** Body of POST /api/audits/{id}/html (spec F1.3). */
+export const HtmlPasteInputSchema = z.object({
+  html: z
+    .string()
+    .min(200, 'Paste the full page HTML (View Source, then copy all)')
+    .max(5_000_000, 'The pasted HTML is larger than 5 MB'),
+});
+export type HtmlPasteInput = z.infer<typeof HtmlPasteInputSchema>;
+
 export const AuditRecordSchema = z.object({
   auditId: z
     .string()
@@ -309,6 +333,7 @@ export const AuditRecordSchema = z.object({
   error: AuditErrorSchema.optional(),
   shareToken: z.string().optional(),
   totalCostInr: z.number().nonnegative().default(0),
+  capture: CaptureSummarySchema.optional(),
 });
 export type AuditRecord = z.infer<typeof AuditRecordSchema>;
 

@@ -11,9 +11,12 @@ import {
   type ScoreCard,
 } from '@rankforge/schema';
 import { getAuditStore } from '../store/audit-store.js';
+import { createStorageFromEnv, type ArtifactStorage } from '@rankforge/storage';
+import { captureTarget } from '../capture/capture.js';
+import { runCaptureStage } from '../pipeline/capture-stage.js';
+import { log } from '../lib/log.js';
 import { validateTargetUrl } from '@rankforge/ssrf';
 
-export const tasksRouter = Router();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -533,6 +536,13 @@ export const MOCK_PATCHES: (auditId: string) => AuditPatch[] = (auditId) => [
  * Walks through all 12 active lifecycle statuses in §6.1 with sleeps (default 2s, 0s in fastMode).
  * Keeps HTTP connection open per Cloud Run §8.6 rules.
  */
+export interface TaskRunnerDeps {
+  capture: typeof captureTarget;
+  storage: () => ArtifactStorage;
+}
+
+export function createTasksRouter(deps: TaskRunnerDeps): ReturnType<typeof Router> {
+const tasksRouter = Router();
 tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
   const startTime = Date.now();
   const parseResult = RunAuditTaskInputSchema.safeParse(req.body);
@@ -600,24 +610,6 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
       progress: number;
       action?: () => Promise<void>;
     }> = [
-      {
-        status: 'queued',
-        stage: 'init',
-        progress: 5,
-      },
-      {
-        status: 'capturing',
-        stage: 'scrape_target',
-        progress: 12,
-      },
-      {
-        status: 'captured',
-        stage: 'detect_platform',
-        progress: 20,
-        action: async () => {
-          await store.updateAudit(auditId, { platform: 'shopify' });
-        },
-      },
       {
         status: 'awaiting_keyword',
         stage: 'keyword_resolution',
@@ -698,6 +690,29 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
       },
     ];
 
+    await store.updateAudit(auditId, {
+      status: 'queued',
+      stage: 'init',
+      progressPercent: 5,
+      stageTimings: { queued: new Date().toISOString() },
+    });
+
+    const current = (await store.getAudit(auditId)) ?? existingAudit;
+    const outcome = await runCaptureStage(
+      { store, storage: deps.storage(), capture: deps.capture, logger: log },
+      current
+    );
+    if (outcome !== 'captured') {
+      const failedAudit = await store.getAudit(auditId);
+      return res.status(200).json({
+        success: false,
+        auditId,
+        finalStatus: outcome,
+        elapsedMs: Date.now() - startTime,
+        error: failedAudit?.error,
+      });
+    }
+
     // Walk through stages
     for (let i = 0; i < stages.length; i++) {
       const step = stages[i]!;
@@ -766,4 +781,11 @@ tasksRouter.post('/internal/tasks/run', async (req: Request, res: Response) => {
       error: error.message,
     });
   }
+});
+return tasksRouter;
+}
+
+export const tasksRouter = createTasksRouter({
+  capture: captureTarget,
+  storage: () => createStorageFromEnv(),
 });
