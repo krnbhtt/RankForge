@@ -103,6 +103,19 @@ describe.each(stores)('%s contract', (_name, make) => {
     expect(seen).toContain('captured');
   });
 
+  it('finds a recent completed audit for the same URL and keyword', async () => {
+    const url = `https://shop.example.org/products/${id}`;
+    const base = { ...record(`${id}_c1`), targetUrl: url, keyword: 'blue mug' };
+    await store.createAudit(base);
+    expect(await store.findRecentComplete(url, 'blue mug', 60_000)).toBeNull();
+    await store.updateAudit(`${id}_c1`, { status: 'complete' });
+    expect((await store.findRecentComplete(url, 'blue mug', 60_000))?.auditId).toBe(`${id}_c1`);
+    expect(await store.findRecentComplete(url, 'other keyword', 60_000)).toBeNull();
+    expect(await store.findRecentComplete(url, undefined, 60_000)).not.toBeNull();
+    expect(await store.findRecentComplete(url, 'blue mug', -1)).toBeNull();
+    expect(await store.findRecentComplete('https://elsewhere.example.org/p', undefined, 60_000)).toBeNull();
+  });
+
   it('refuses malformed audit ids', async () => {
     await expect(store.getAudit('../escape')).rejects.toThrow();
   });

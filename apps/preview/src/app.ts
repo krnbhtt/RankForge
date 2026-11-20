@@ -28,6 +28,26 @@ export const SCROLL_SYNC_SCRIPT =
   "addEventListener('scroll',function(){if(lock)return;var m=max();parent.postMessage({source:'rf-preview',type:'scroll',ratio:m>0?window.scrollY/m:0},'*')},{passive:true});" +
   "addEventListener('message',function(e){var d=e.data;if(!d||d.source!=='rf-studio'||d.type!=='scroll-to')return;lock=true;window.scrollTo(0,d.ratio*max());clearTimeout(t);t=setTimeout(function(){lock=false},80)})})();</script>";
 
+/**
+ * Annotation tags (spec F7.3): a numbered dot on every section the rebuild added, with a pop-over giving the tag
+ * (Ranking, Conversion or Both), a Sample chip where content is illustrative, and the evidence. Built with textContent
+ * only, from data-rf-* attributes written by the patch applier. Injected at serve time, never stored.
+ */
+export const ANNOTATION_SCRIPT =
+  '<script data-rf-annotate>(function(){function run(){var els=[].slice.call(document.querySelectorAll("[data-rf-section]"));' +
+  'var st=document.createElement("style");st.textContent=".rf-ann{position:absolute;top:-10px;right:-10px;z-index:2147483001;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:#2563eb;color:#fff;font:700 12px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35)}.rf-ann[data-tag=Ranking]{background:#7c3aed}.rf-ann[data-tag=Both]{background:#0f766e}.rf-pop{position:absolute;top:22px;right:0;z-index:2147483002;width:260px;padding:10px;border-radius:8px;background:#111;color:#fff;font:12px/1.4 system-ui,sans-serif;text-align:left;box-shadow:0 4px 16px rgba(0,0,0,.35)}.rf-pop b{display:inline-block;margin-right:6px;padding:2px 6px;border-radius:4px;background:#2563eb;font-size:10px}.rf-pop i{display:inline-block;padding:2px 6px;border-radius:4px;background:#fff3cd;color:#664d03;font-size:10px;font-style:normal}";' +
+  'document.head.appendChild(st);els.forEach(function(el,i){if(el.querySelector(":scope > .rf-ann"))return;var cs=getComputedStyle(el);if(cs.position==="static")el.style.position="relative";' +
+  'var dot=document.createElement("button");dot.type="button";dot.className="rf-ann";dot.textContent=String(i+1);dot.setAttribute("data-tag",el.getAttribute("data-rf-tag")||"");dot.setAttribute("aria-label","Why this section was added");' +
+  'var pop=null;dot.addEventListener("click",function(e){e.stopPropagation();if(pop){pop.remove();pop=null;return}pop=document.createElement("div");pop.className="rf-pop";' +
+  'var tag=document.createElement("b");tag.textContent=el.getAttribute("data-rf-tag")||"";pop.appendChild(tag);' +
+  'if(el.getAttribute("data-rf-sample")==="true"){var s=document.createElement("i");s.textContent="Sample";pop.appendChild(s)}' +
+  'var p=document.createElement("div");p.style.marginTop="6px";p.textContent=el.getAttribute("data-rf-reason")||"";pop.appendChild(p);el.appendChild(pop)});el.appendChild(dot)})}' +
+  'if(document.readyState==="complete")run();else window.addEventListener("load",run)})();</script>';
+
+export function injectAnnotations(html: string): string {
+  return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${ANNOTATION_SCRIPT}</body>`) : html + ANNOTATION_SCRIPT;
+}
+
 export function injectScrollSync(html: string): string {
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${SCROLL_SYNC_SCRIPT}</body>`) : html + SCROLL_SYNC_SCRIPT;
 }
@@ -94,7 +114,13 @@ export function createPreviewApp(storage: ArtifactStorage) {
     }
 
     try {
-      const object = await storage.get(key);
+      let object = await storage.get(key);
+      // The optimised page reuses the assets proxied for the reproduction, which live under target/assets.
+      if (!object && variant === 'optimised' && relative.startsWith('assets/')) {
+        const sharedKey = `${auditId}/target/${relative}`;
+        assertSafeKey(sharedKey);
+        object = await storage.get(sharedKey);
+      }
       if (!object) {
         const isIndex = relative === 'index.html';
         res
@@ -114,7 +140,12 @@ export function createPreviewApp(storage: ArtifactStorage) {
       const isEntry = relative === 'index.html' || relative === 'static.html';
       res.setHeader('Content-Type', object.contentType || contentTypeForKey(relative));
       res.setHeader('Cache-Control', isHtml ? 'no-store' : 'public, max-age=86400, immutable');
-      res.status(200).send(isHtml && isEntry ? injectScrollSync(object.body.toString('utf8')) : object.body);
+      let body: string | Buffer = object.body;
+      if (isHtml && isEntry) {
+        body = injectScrollSync(object.body.toString('utf8'));
+        if (variant === 'optimised' && req.query.annotate === '1') body = injectAnnotations(body);
+      }
+      res.status(200).send(body);
       logRequest({ auditId, variant, path: relative, status: 200, durationMs: Date.now() - started });
     } catch (err) {
       logRequest({

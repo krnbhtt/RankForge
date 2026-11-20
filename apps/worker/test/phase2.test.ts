@@ -316,3 +316,44 @@ describe('entity clustering', () => {
     expect(c.entities.find((e) => /dishwasher/i.test(e.name))?.frequency).toBe(2);
   });
 });
+
+import * as fsNode from 'node:fs';
+import * as osNode from 'node:os';
+import * as pathNode from 'node:path';
+import { writeSerpCache } from '../src/competitors/serp.js';
+
+describe('SERP cache', () => {
+  const dir = fsNode.mkdtempSync(pathNode.join(osNode.tmpdir(), 'rf-serp-'));
+  const page = (url: string) => ({
+    organic_results: [{ position: 1, title: 'A', link: url, domain: new URL(url).hostname }],
+    related_questions: [],
+    related_searches: [],
+  });
+
+  it('serves a fresh cached result without calling the API, and writes one after a live fetch', async () => {
+    process.env.SERP_CACHE_DIR = dir;
+    const fetchImpl = vi.fn(async () => json(page('https://live.example.org/p/1')));
+    const first = await fetchSerp({ keyword: 'Cache Test One', apiKey: 'k', fetchImpl: fetchImpl as never });
+    const calls = fetchImpl.mock.calls.length;
+    expect(first.organic[0]?.url).toBe('https://live.example.org/p/1');
+    const second = await fetchSerp({ keyword: 'cache test one', apiKey: 'k', fetchImpl: fetchImpl as never });
+    expect(second.organic[0]?.url).toBe('https://live.example.org/p/1');
+    expect(fetchImpl.mock.calls.length).toBe(calls);
+  });
+
+  it('falls back to a stale cached result when the API is out of quota', async () => {
+    process.env.SERP_CACHE_DIR = dir;
+    writeSerpCache({ keyword: 'stale keyword', organic: [{ position: 1, url: 'https://old.example.org/p', title: 'Old', snippet: '', domain: 'old.example.org' }], peopleAlsoAsk: [], relatedSearches: [] });
+    const file = fsNode.readdirSync(dir).map((f) => pathNode.join(dir, f)).find((f) => fsNode.readFileSync(f, 'utf8').includes('old.example.org'))!;
+    const saved = JSON.parse(fsNode.readFileSync(file, 'utf8'));
+    saved.savedAt = Date.now() - 3 * 24 * 3600_000;
+    fsNode.writeFileSync(file, JSON.stringify(saved));
+    const out = await fetchSerp({ keyword: 'stale keyword', apiKey: 'k', fetchImpl: (async () => json({}, 402)) as never });
+    expect(out.organic[0]?.url).toBe('https://old.example.org/p');
+  });
+
+  it('still fails when there is nothing cached', async () => {
+    process.env.SERP_CACHE_DIR = dir;
+    await expect(fetchSerp({ keyword: 'never cached', apiKey: 'k', fetchImpl: (async () => json({}, 402)) as never })).rejects.toMatchObject({ code: 'QuotaError' });
+  });
+});

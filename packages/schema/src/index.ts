@@ -359,6 +359,8 @@ export const AuditCreateInputSchema = z.object({
   keyword: z.string().trim().max(100).optional(),
   imageConsent: z.boolean().default(false),
   userId: z.string().optional().default('anonymous'),
+  /** Skip the 24-hour cache of completed audits for the same URL and keyword. */
+  refresh: z.boolean().optional(),
 });
 export type AuditCreateInput = z.infer<typeof AuditCreateInputSchema>;
 
@@ -367,6 +369,8 @@ export const AuditCreateResponseSchema = z.object({
   auditId: z.string(),
   status: AuditStatusEnum,
   createdAt: z.string(),
+  /** True when an earlier completed audit of the same page was reused. */
+  cached: z.boolean().optional(),
 });
 export type AuditCreateResponse = z.infer<typeof AuditCreateResponseSchema>;
 
@@ -392,8 +396,12 @@ export const RunAuditTaskInputSchema = z.object({
   keyword: z.string().optional(),
   imageConsent: z.boolean().default(false),
   fastMode: z.boolean().optional().default(false),
+  /** Continue from the stages already checkpointed instead of starting over (used by retry). */
+  resume: z.boolean().optional().default(false),
 });
 export type RunAuditTaskInput = z.infer<typeof RunAuditTaskInputSchema>;
+/** What callers send (fields with defaults may be omitted). */
+export type RunAuditTaskPayload = z.input<typeof RunAuditTaskInputSchema>;
 
 // Legacy task contracts (for backwards compatibility)
 export const ScrapeTaskInputSchema = z.object({

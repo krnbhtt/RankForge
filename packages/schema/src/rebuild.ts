@@ -26,6 +26,10 @@ export const PatchOpSchema = z.object({
   all: z.boolean().optional(),
   /** injectJsonLd: remove existing JSON-LD blocks of this @type first. */
   replaceType: z.string().optional(),
+  /** Used when `target` matches nothing, for example because the section it was chained to was dropped. */
+  fallbackTarget: z.string().optional(),
+  /** Other insertion points to try, in order, if this one breaks the page. */
+  alternates: z.array(z.object({ op: z.enum(['insertBefore', 'insertAfter']), target: z.string().min(1) })).optional(),
   tag: z.enum(['Ranking', 'Conversion', 'Both']),
   reason: z.string().min(1).max(400),
   sample: z.boolean(),

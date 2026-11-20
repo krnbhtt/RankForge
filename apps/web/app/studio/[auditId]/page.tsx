@@ -6,6 +6,7 @@ import { useAuditStream } from '@/hooks/use-audit-stream';
 import { StudioTimeline } from '@/components/studio/timeline';
 import { StudioPreviewContainer } from '@/components/studio/preview-container';
 import { StudioDrawer } from '@/components/studio/drawer';
+import { useAuditReport } from '@/hooks/use-audit-report';
 
 export default function StudioPage({ params }: { params: { auditId: string } }) {
   const { auditId } = params;
@@ -21,6 +22,7 @@ export default function StudioPage({ params }: { params: { auditId: string } }) 
     progressPercent,
     elapsedSeconds,
   } = useAuditStream(auditId);
+  const bundle = useAuditReport(auditId, status);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans">
@@ -82,6 +84,7 @@ export default function StudioPage({ params }: { params: { auditId: string } }) 
           stage={stage}
           targetUrl={audit?.targetUrl}
           error={audit?.error}
+          optimisedVersion={`${patches.filter((p) => p.status === 'applied').length}:${status}`}
         />
 
         {/* Collapsible 6-Tab Insights Drawer */}
@@ -92,6 +95,7 @@ export default function StudioPage({ params }: { params: { auditId: string } }) 
           queries={queries}
           blueprint={blueprint}
           patches={patches}
+          bundle={bundle}
         />
       </div>
     </div>

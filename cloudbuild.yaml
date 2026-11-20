@@ -1,0 +1,86 @@
+# CI/CD for rf-web, rf-worker and rf-preview (specification 8.9).
+# One build step per image, one deploy step per service. Run by a Cloud Build trigger on `main`
+# (and on `staging` with _SUFFIX=-staging). Nothing here has been run; see docs/RUNBOOK.md.
+substitutions:
+  _REGION: asia-south1
+  _SUFFIX: ''
+  _REPO: rankforge
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - id: build-web
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'apps/web/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:$COMMIT_SHA', '.']
+  - id: build-worker
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'apps/worker/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/worker:$COMMIT_SHA', '.']
+  - id: build-preview
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'apps/preview/Dockerfile', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/preview:$COMMIT_SHA', '.']
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        docker push ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:$COMMIT_SHA &&
+        docker push ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/worker:$COMMIT_SHA &&
+        docker push ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/preview:$COMMIT_SHA
+
+  - id: deploy-worker
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - rf-worker${_SUFFIX}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/worker:$COMMIT_SHA
+      - --region=${_REGION}
+      - --service-account=rf-worker@$PROJECT_ID.iam.gserviceaccount.com
+      - --memory=4Gi
+      - --cpu=2
+      - --concurrency=1
+      - --timeout=900
+      - --cpu-boost
+      - --min-instances=0
+      - --max-instances=10
+      - --no-allow-unauthenticated
+      - --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,SERP_API_KEY=SERP_API_KEY:latest,PSI_API_KEY=PSI_API_KEY:latest
+      - --set-env-vars=BUCKET=$PROJECT_ID-artifacts,AUDIT_STORE=firestore,GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+
+  - id: deploy-preview
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - rf-preview${_SUFFIX}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/preview:$COMMIT_SHA
+      - --region=${_REGION}
+      - --service-account=rf-preview@$PROJECT_ID.iam.gserviceaccount.com
+      - --memory=512Mi
+      - --allow-unauthenticated
+      - --set-env-vars=BUCKET=$PROJECT_ID-artifacts
+
+  - id: deploy-web
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        WORKER_URL=$(gcloud run services describe rf-worker${_SUFFIX} --region=${_REGION} --format='value(status.url)')
+        PREVIEW_URL=$(gcloud run services describe rf-preview${_SUFFIX} --region=${_REGION} --format='value(status.url)')
+        gcloud run deploy rf-web${_SUFFIX} \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:$COMMIT_SHA \
+          --region=${_REGION} \
+          --service-account=rf-web@$PROJECT_ID.iam.gserviceaccount.com \
+          --memory=1Gi --concurrency=80 --allow-unauthenticated \
+          --set-env-vars=WORKER_URL=$$WORKER_URL,TASKS_QUEUE=audit-queue,PREVIEW_ORIGIN=$$PREVIEW_URL,BUCKET=$PROJECT_ID-artifacts,AUDIT_STORE=firestore,GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/worker:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/preview:$COMMIT_SHA

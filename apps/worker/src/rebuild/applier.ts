@@ -85,10 +85,15 @@ export function applyPatchOps(html: string, ops: PatchOp[]): ApplyResult {
         continue;
       }
 
-      const count = selectorMatches($, op.target);
-      if (count < 0) throw new Error(`Invalid selector "${op.target}"`);
+      let selector = op.target;
+      let count = selectorMatches($, selector);
+      if (count < 0) throw new Error(`Invalid selector "${selector}"`);
+      if (count === 0 && op.fallbackTarget && selectorMatches($, op.fallbackTarget) > 0) {
+        selector = op.fallbackTarget;
+        count = selectorMatches($, selector);
+      }
       if (count === 0) throw new Error(`Selector "${op.target}" matched nothing`);
-      const targets = op.all ? $(op.target) : $(op.target).first();
+      const targets = op.all ? $(selector) : $(selector).first();
 
       switch (op.op) {
         case 'setText':
@@ -169,7 +174,8 @@ export function runtimePatchScript(ops: PatchOp[]): string {
           var s = document.createElement('script'); s.type = 'application/ld+json'; s.setAttribute('data-rf-patch', op.sectionId + '_' + i); s.textContent = op.html; document.head.appendChild(s); return;
         }
         if ((op.op === 'insertBefore' || op.op === 'insertAfter') && document.querySelector('[data-rf-patch="' + op.sectionId + '_' + i + '"]')) return;
-        var targets = op.all ? Array.prototype.slice.call(document.querySelectorAll(op.target)) : [document.querySelector(op.target)];
+        var sel = op.target; if (!document.querySelector(sel) && op.fallbackTarget) sel = op.fallbackTarget;
+        var targets = op.all ? Array.prototype.slice.call(document.querySelectorAll(sel)) : [document.querySelector(sel)];
         targets = targets.filter(Boolean); if (!targets.length) return;
         if (op.op === 'setText') targets.forEach(function(el){ if (el.textContent !== (op.html || '')) el.textContent = op.html || ''; });
         else if (op.op === 'setAttr') targets.forEach(function(el, n){ var v = op.attr.value.replace('{n}', String(n + 1)); if (el.getAttribute(op.attr.name) !== v) el.setAttribute(op.attr.name, v); });

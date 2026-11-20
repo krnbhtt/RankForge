@@ -33,6 +33,13 @@ app.get('/healthz', (_req: Request, res: Response) => {
     port: PORT,
     uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
+    config: {
+      geminiKey: Boolean(process.env.GEMINI_API_KEY),
+      serpKey: Boolean(process.env.SERP_API_KEY),
+      psiKey: Boolean(process.env.PSI_API_KEY),
+      bucket: process.env.BUCKET ?? null,
+      auditStore: process.env.FIRESTORE_EMULATOR_HOST || process.env.AUDIT_STORE === 'firestore' ? 'firestore' : 'file',
+    },
     featureFlags: {
       imageGeneration: featureFlags.IMAGE_GENERATION,
       visualCroAudit: featureFlags.VISUAL_CRO_AUDIT,
@@ -145,6 +152,13 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
   res.status(500).json({ success: false, error: errorPayload });
 });
+
+if (!process.env.GEMINI_API_KEY) {
+  console.error(JSON.stringify({ level: 'error', msg: 'GEMINI_API_KEY is not set; audits will fail until it is configured' }));
+}
+if (!process.env.SERP_API_KEY) {
+  console.warn(JSON.stringify({ level: 'warn', msg: 'SERP_API_KEY is not set; only cached SERP results can be used' }));
+}
 
 // Start listening if executed directly
 if (process.env.NODE_ENV !== 'test') {

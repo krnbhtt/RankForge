@@ -91,8 +91,20 @@ This document tracks known issues, technical risks, environment limitations, and
 ### 12. Consensus entities are matched by exact normalised phrase
 - Few entities reach the "4+ competitors" bar, so the entity score is often low. Fix: cluster similar phrases before counting.
 
-### 13. Studio panels still contain Phase 0 mock content
-- Schema, Category and part of the Queries panels, and the right preview pane, still use Phase 0 mock content or placeholders. They are replaced in Phase 6 (and Phase 5 for the optimised page). Scores and the Findings and Competitors tabs show real data.
+### 13. Studio panels (resolved)
+- All panels now show real data. Remaining gaps: no Workspace screen, no blueprint outline, no automated accessibility audit.
 
 ### 14. Worker image
-- The Docker image cannot run as written (workspace packages export TypeScript source) and could not be built here because the Docker daemon hangs.
+- The workspace-package problem is fixed by bundling (`scripts/bundle.mjs`, run under `node` locally), but the Docker images have never been built because the Docker daemon on this machine hangs.
+
+### 15. SERP API credits exhausted (2026-11-20)
+- The supplied SearchAPI.io account has no credits left. The system uses cached SERP results (and a stale cache when the API fails), so only keywords already searched can be audited until credits are added.
+
+### 16. Optimised page quality depends on the model
+- Without Gemini 3.1 Pro quota the section writer ran on Flash-class models. Sample content is generic. Most of the measured score gain comes from Sample content (see the Phase 4 and 5 report).
+
+### 17. Verification looks at the top 3000 px only
+- Damage above an insertion is checked in a fixed 3000 px viewport; a section inserted far below cannot be checked for damage beyond that depth.
+
+### 18. Watch-mode restarts kill a running audit
+- Editing worker code under `tsx watch` restarts the process mid-run. Use `POST /api/audits/{id}/retry` to resume.

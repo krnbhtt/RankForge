@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import type { AuditReportBundle } from '@/hooks/use-audit-report';
+import { CategoryPanel, QueriesPanel, SchemaPanel } from './panels';
 import type {
   AuditRecord,
   AuditCompetitor,
@@ -17,6 +19,7 @@ export interface StudioDrawerProps {
   queries: AuditQuery[];
   blueprint: AuditBlueprintSection[];
   patches: AuditPatch[];
+  bundle?: AuditReportBundle | null;
 }
 
 type TabType = 'scores' | 'findings' | 'queries' | 'competitors' | 'schema' | 'category';
@@ -84,10 +87,10 @@ export function StudioDrawer({
   competitors = [],
   findings = [],
   queries = [],
+  bundle = null,
 }: StudioDrawerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('scores');
   const [isOpen, setIsOpen] = useState<boolean>(true);
-  const [copiedSchema, setCopiedSchema] = useState<boolean>(false);
   const prevWidthRef = useRef<number>(typeof window !== 'undefined' ? window.innerWidth : 1440);
 
   // Auto-collapse on viewports < 1280px per Spec R3 without clobbering user manual toggle
@@ -134,34 +137,6 @@ export function StudioDrawer({
   const ppiDelta = gain(ppiBefore, ppiAfter);
 
   const attributions = optimized?.attributions ?? [];
-
-  const sampleJsonLd = {
-    '@context': 'https://schema.org/',
-    '@type': 'Product',
-    name: 'Ceramic Pour Over Coffee Dripper 02',
-    image: ['https://example.com/dripper.jpg'],
-    description: 'High-fire Japanese ceramic coffee dripper with spiral flow ribs.',
-    brand: { '@type': 'Brand', name: 'RoastMaster' },
-    offers: {
-      '@type': 'Offer',
-      url: audit?.targetUrl || 'https://example.com/products/dripper',
-      priceCurrency: 'INR',
-      price: '1899',
-      priceValidUntil: '2027-12-31',
-      availability: 'https://schema.org/InStock',
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      reviewCount: '142',
-    },
-  };
-
-  const copySchemaToClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(sampleJsonLd, null, 2));
-    setCopiedSchema(true);
-    setTimeout(() => setCopiedSchema(false), 2000);
-  };
 
   if (!isOpen) {
     return (
@@ -260,6 +235,21 @@ export function StudioDrawer({
                 </span>
               </div>
             </div>
+
+            {optimized && (
+              <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1" role="note">
+                <p>
+                  <span className="inline-block px-1.5 py-0.5 mr-1 rounded text-[10px] font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700">Sample</span>
+                  The after scores include illustrative content that is labelled Sample on the page.
+                  {bundle?.report?.optimisedExcludingSample
+                    ? ` Without it: Visibility ${bundle.report.optimisedExcludingSample.visibility.current}, Conversion ${bundle.report.optimisedExcludingSample.conversion.current}, PPI ${bundle.report.optimisedExcludingSample.ppi.current}.`
+                    : ''}
+                </p>
+                {bundle?.report?.regression && (
+                  <p className="text-amber-800 dark:text-amber-300">The rebuilt page scored below the original. See what was dropped in the report.</p>
+                )}
+              </div>
+            )}
 
             {baseline ? (
               <>
@@ -409,64 +399,7 @@ export function StudioDrawer({
         )}
 
         {/* 3. Queries Tab */}
-        {activeTab === 'queries' && (
-          <div className="space-y-3">
-            <div className="text-[11px] text-slate-500">Unanswered Intent Sequence</div>
-            {(queries.length > 0
-              ? queries
-              : [
-                  {
-                    queryId: 'q1',
-                    query: 'is this ceramic dripper dishwasher safe',
-                    step: 1,
-                    source: 'paa',
-                    answered: true,
-                    sectionTarget: 'faq',
-                  },
-                  {
-                    queryId: 'q2',
-                    query: 'difference between v60 size 01 and 02',
-                    step: 2,
-                    source: 'paa',
-                    answered: true,
-                    sectionTarget: 'faq',
-                  },
-                  {
-                    queryId: 'q3',
-                    query: 'does it come with paper filters included',
-                    step: 3,
-                    source: 'related',
-                    answered: true,
-                    sectionTarget: 'specifications',
-                  },
-                  {
-                    queryId: 'q4',
-                    query: 'what is the best grind size for ceramic pour over',
-                    step: 4,
-                    source: 'grounding',
-                    answered: true,
-                    sectionTarget: 'brew_guide',
-                  },
-                ]
-            ).map((q) => (
-              <div
-                key={q.queryId}
-                className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 uppercase">
-                    Step {q.step} • {q.source}
-                  </span>
-                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded">
-                    ✓ Answered in Rebuild
-                  </span>
-                </div>
-                <div className="font-medium text-slate-800 dark:text-slate-200">"{q.query}"</div>
-                <div className="text-[10px] text-slate-500">Target Section: {q.sectionTarget || 'FAQ'}</div>
-              </div>
-            ))}
-          </div>
-        )}
+        {activeTab === 'queries' && <QueriesPanel queries={queries} bundle={bundle ?? null} />}
 
         {/* 4. Competitors Tab */}
         {activeTab === 'competitors' && (
@@ -506,55 +439,10 @@ export function StudioDrawer({
         )}
 
         {/* 5. Schema Tab */}
-        {activeTab === 'schema' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] text-slate-500">Injected JSON-LD Structured Data</span>
-              <button
-                onClick={copySchemaToClipboard}
-                className="px-2.5 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded min-h-[36px]"
-              >
-                {copiedSchema ? '✓ Copied!' : 'Copy JSON-LD'}
-              </button>
-            </div>
-
-            <pre className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] overflow-x-auto leading-relaxed border border-slate-800">
-              {JSON.stringify(sampleJsonLd, null, 2)}
-            </pre>
-          </div>
-        )}
+        {activeTab === 'schema' && <SchemaPanel bundle={bundle ?? null} />}
 
         {/* 6. Category Tab */}
-        {activeTab === 'category' && (
-          <div className="space-y-4">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
-              <div className="text-[10px] font-semibold uppercase text-slate-500">Current Category</div>
-              <div className="font-medium text-slate-800 dark:text-slate-200">
-                Home &gt; Kitchen &gt; Coffee Makers
-              </div>
-              <div className="text-[11px] text-amber-600 font-medium">Overly generic category taxonomy.</div>
-            </div>
-
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2">
-              <div className="text-[10px] font-semibold uppercase text-blue-600 dark:text-blue-400">
-                Recommended Google Product Taxonomy
-              </div>
-              <div className="font-semibold text-slate-900 dark:text-slate-100">
-                Home &amp; Garden &gt; Kitchen &amp; Dining &gt; Coffee Makers &amp; Espresso Machines &gt; Pour-Over Coffee Makers
-              </div>
-              <div className="flex items-center gap-2 pt-1 text-[11px] text-emerald-600 font-medium">
-                <span>Taxonomy ID: 4944</span>
-                <span>•</span>
-                <span>98% Shopping Intent Match</span>
-              </div>
-            </div>
-
-            <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
-              Aligning with exact Google Product Taxonomy ID 4944 increases Free Product Listing visibility on Google
-              Shopping search tabs by up to 34%.
-            </p>
-          </div>
-        )}
+        {activeTab === 'category' && <CategoryPanel bundle={bundle ?? null} />}
       </div>
     </aside>
   );

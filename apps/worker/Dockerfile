@@ -1,39 +1,31 @@
-# Cloud Run Worker Container with Playwright Chromium & Node 20
-FROM mcr.microsoft.com/playwright:v1.65.1-noble AS base
+# rf-worker: Playwright capture, analysis and rebuild (specification 8.4).
+# The image tag must match the pinned Playwright version in apps/worker/package.json.
+FROM mcr.microsoft.com/playwright:v1.65.1-noble
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV NODE_ENV=production \
+    PORT=8080
+WORKDIR /app
 RUN corepack enable
 
-WORKDIR /app
-
-# Copy dependency manifests
-COPY pnpm-lock.yaml* pnpm-workspace.yaml package.json ./
+# Dependency manifests first so the install layer is cached.
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY packages/schema/package.json ./packages/schema/
 COPY packages/scoring/package.json ./packages/scoring/
 COPY packages/config/package.json ./packages/config/
 COPY packages/skills/package.json ./packages/skills/
 COPY packages/ssrf/package.json ./packages/ssrf/
-COPY packages/audit-store/package.json ./packages/audit-store/
 COPY packages/storage/package.json ./packages/storage/
+COPY packages/audit-store/package.json ./packages/audit-store/
 COPY apps/worker/package.json ./apps/worker/
+RUN NODE_ENV=development pnpm install --frozen-lockfile --filter @rankforge/worker...
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Workspace packages export TypeScript source, so bundle the service into one file.
+COPY tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/worker ./apps/worker
+COPY scripts/bundle.mjs ./scripts/bundle.mjs
+RUN node scripts/bundle.mjs worker \
+    && pnpm prune --prod --filter @rankforge/worker... || true
 
-# Copy source code
-COPY . .
-
-# Build packages and worker
-RUN pnpm --filter @rankforge/schema build && \
-    pnpm --filter @rankforge/config build && \
-    pnpm --filter @rankforge/scoring build && \
-    pnpm --filter @rankforge/skills build && \
-    pnpm --filter @rankforge/worker build
-
-ENV PORT=4050
-ENV NODE_ENV=production
-
-EXPOSE 4050
-
-CMD ["node", "apps/worker/dist/index.js"]
+EXPOSE 8080
+CMD ["node", "apps/worker/dist/server.js"]

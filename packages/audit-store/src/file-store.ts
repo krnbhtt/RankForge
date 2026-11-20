@@ -41,6 +41,8 @@ export interface IAuditStore {
   saveImages(auditId: string, images: AuditImage[]): Promise<void>;
   getImages(auditId: string): Promise<AuditImage[]>;
   onAuditChange(auditId: string, callback: (record: AuditRecord) => void): () => void;
+  /** Newest completed audit of the same URL (and keyword, when given) created within `maxAgeMs`, or null. */
+  findRecentComplete(targetUrl: string, keyword: string | undefined, maxAgeMs: number): Promise<AuditRecord | null>;
 }
 
 /**
@@ -140,6 +142,20 @@ export class FileAuditStore implements IAuditStore {
       images: [],
     };
     await this.writeComposite(composite);
+  }
+
+  async findRecentComplete(targetUrl: string, keyword: string | undefined, maxAgeMs: number): Promise<AuditRecord | null> {
+    const names = await fs.promises.readdir(this.baseDir).catch(() => [] as string[]);
+    let best: AuditRecord | null = null;
+    for (const name of names.filter((n) => n.endsWith('.json'))) {
+      const composite = await this.readComposite(name.replace(/\.json$/, ''));
+      const a = composite?.audit;
+      if (!a || a.status !== 'complete' || a.targetUrl !== targetUrl) continue;
+      if (keyword && a.keyword !== keyword) continue;
+      if (Date.now() - Date.parse(a.createdAt) > maxAgeMs) continue;
+      if (!best || a.createdAt > best.createdAt) best = a;
+    }
+    return best;
   }
 
   async getAudit(auditId: string): Promise<AuditRecord | null> {

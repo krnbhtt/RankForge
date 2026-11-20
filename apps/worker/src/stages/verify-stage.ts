@@ -164,13 +164,28 @@ export async function runVerifyStage(
   const fixOps = rebuild.applied.filter((o) => o.sectionId.startsWith('fix_'));
   const sectionOps = rebuild.applied.filter((o) => !o.sectionId.startsWith('fix_'));
 
-  const report = await verifyOptimised({ browser, storage, auditId, render, fixOps, sectionOps });
+  const mobileCta = target.ctaPositions.find((c) => c.viewport === 'mobile') ?? target.ctaPositions[0];
+  const report = await verifyOptimised({ browser, storage, auditId, render, fixOps, sectionOps, ctaSelector: mobileCta?.aboveFold ? mobileCta.selector : undefined });
   const droppedSections = report.sections.filter((v) => !v.ok).map((v) => ({ sectionId: v.sectionId, reason: v.reason ?? 'Failed verification' }));
   const dropIds = new Set(droppedSections.map((d) => d.sectionId));
-  const finalOps = rebuild.applied.filter((o) => !dropIds.has(o.sectionId));
+  const finalOps = report.acceptedOps;
   const finalHtml = render(finalOps);
   await storage.put(optimisedKey(auditId), finalHtml, 'text/html; charset=utf-8');
 
+  const moved = new Map(report.acceptedOps.filter((o) => !o.sectionId.startsWith('fix_')).map((o) => [o.sectionId, o]));
+  const placementChanged = report.sections.filter((v) => v.movedTo);
+  if (placementChanged.length > 0) {
+    const docs = await store.getPatches(auditId);
+    await store.savePatches(
+      auditId,
+      docs.map((p): AuditPatch => {
+        const op = moved.get(p.sectionId);
+        return op && placementChanged.some((v) => v.sectionId === p.sectionId)
+          ? { ...p, op: op.op, targetSelector: op.target, opJson: JSON.stringify(op) }
+          : p;
+      })
+    );
+  }
   if (dropIds.size > 0) {
     const docs = await store.getPatches(auditId);
     const reasonById = new Map(droppedSections.map((d) => [d.sectionId, d.reason]));
@@ -204,6 +219,10 @@ export async function runVerifyStage(
   const scoreCard = scoreAfter(withSample, base, keyword, before, attributions);
   const scoreCardExcludingSample = scoreAfter(withoutSample, base, keyword, before);
 
+  const regression = scoreCard.ppi.current < before.ppi.current;
+  if (regression) {
+    logger('warn', 'optimised page scores below the original', { auditId, stage: 'verify', before: before.ppi.current, after: scoreCard.ppi.current });
+  }
   await storage.put(
     `${auditId}/report.json`,
     JSON.stringify(
@@ -212,6 +231,7 @@ export async function runVerifyStage(
         optimised: scoreCard,
         optimisedExcludingSample: scoreCardExcludingSample,
         verify: report,
+        regression,
         dropped: [...rebuild.dropped, ...droppedSections],
         blueprint: blueprint.decisionLog,
       },

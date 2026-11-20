@@ -12,9 +12,13 @@ COPY packages/schema/package.json ./packages/schema/
 COPY packages/scoring/package.json ./packages/scoring/
 COPY packages/config/package.json ./packages/config/
 COPY packages/skills/package.json ./packages/skills/
+COPY packages/ssrf/package.json ./packages/ssrf/
+COPY packages/storage/package.json ./packages/storage/
+COPY packages/audit-store/package.json ./packages/audit-store/
 COPY apps/web/package.json ./apps/web/
+COPY .npmrc ./
 
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile --filter @rankforge/web...
 
 # Stage 3: Build application
 FROM base AS builder

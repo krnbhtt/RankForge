@@ -110,3 +110,33 @@ describe('scroll sync bridge', () => {
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
   });
 });
+
+describe('annotation tags', () => {
+  it('injects annotations only for the optimised variant when asked', async () => {
+    await storage.put('aud1/optimised/index.html', '<html><body><section data-rf-section="s1" data-rf-tag="Both" data-rf-reason="why">x</section></body></html>', 'text/html');
+    const on = await (await get('/preview/aud1/optimised/?annotate=1')).text();
+    expect(on).toContain('data-rf-annotate');
+    expect(on).toContain('data-rf-sync');
+    expect(await (await get('/preview/aud1/optimised/')).text()).not.toContain('data-rf-annotate');
+    expect(await (await get('/preview/aud1/current/?annotate=1')).text()).not.toContain('data-rf-annotate');
+  });
+
+  it('serves the static copy only when requested', async () => {
+    await storage.put('aud1/target/static.html', '<html><body>static-copy</body></html>', 'text/html');
+    expect(await (await get('/preview/aud1/current/?static=1')).text()).toContain('static-copy');
+    expect(await (await get('/preview/aud1/current/')).text()).toContain('current');
+  });
+});
+
+describe('optimised variant asset sharing', () => {
+  it('serves proxied assets from the reproduction when the optimised folder has none', async () => {
+    const res = await get('/preview/aud1/optimised/assets/abc.css');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/css');
+  });
+
+  it('does not let the current variant read outside its own folder', async () => {
+    await storage.put('aud1/optimised/assets/only-optimised.css', 'x{}', 'text/css');
+    expect((await get('/preview/aud1/current/assets/only-optimised.css')).status).toBe(404);
+  });
+});

@@ -197,6 +197,8 @@ export function sectionOps(spec: BlueprintSectionSpec, html: string): PatchOp {
   return {
     op: spec.anchor.position,
     target: spec.anchor.selector,
+    fallbackTarget: spec.anchor.fallbackSelector,
+    alternates: spec.anchor.alternates?.map((a) => ({ op: a.position, target: a.selector })),
     html,
     tag: spec.tag,
     reason: spec.justifications[0]?.note ?? spec.name,

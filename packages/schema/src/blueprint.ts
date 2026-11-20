@@ -28,6 +28,10 @@ export const AnchorSchema = z.object({
   selector: z.string().min(1),
   position: z.enum(['insertBefore', 'insertAfter']),
   componentKind: z.string().optional(),
+  /** Other places to try, in order, if the first one breaks the page (for example pushes the buy button down). */
+  alternates: z.array(z.object({ selector: z.string().min(1), position: z.enum(['insertBefore', 'insertAfter']) })).max(4).optional(),
+  /** The component anchor to fall back to when `selector` points at a section that was dropped. */
+  fallbackSelector: z.string().optional(),
 });
 export type Anchor = z.infer<typeof AnchorSchema>;
 

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AuditError, AuditStatus } from '@rankforge/schema';
+import { usePreviewOrigin } from '@/hooks/use-preview-origin';
 
 export const PREVIEW_ORIGIN = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN ?? 'http://localhost:4060';
 
@@ -11,6 +12,8 @@ export interface StudioPreviewContainerProps {
   stage?: string;
   targetUrl?: string;
   error?: AuditError;
+  /** Changes whenever a new section lands, so the optimised preview reloads as it is built. */
+  optimisedVersion?: string;
 }
 
 type Viewport = 'desktop' | 'mobile';
@@ -203,20 +206,24 @@ function PreviewFrame({
   );
 }
 
-export function StudioPreviewContainer({ auditId, status, stage, targetUrl, error }: StudioPreviewContainerProps) {
+export function StudioPreviewContainer({ auditId, status, stage, targetUrl, error, optimisedVersion = '0' }: StudioPreviewContainerProps) {
+  const previewOrigin = usePreviewOrigin();
   const [viewport, setViewport] = useState<Viewport>('desktop');
+  const [annotate, setAnnotate] = useState(true);
+  const [staticCopy, setStaticCopy] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const leftRef = useRef<HTMLIFrameElement | null>(null);
   const rightRef = useRef<HTMLIFrameElement | null>(null);
 
   const onMessage = useCallback((event: MessageEvent) => {
-    if (event.origin !== new URL(PREVIEW_ORIGIN).origin) return;
+    if (event.origin !== new URL(previewOrigin).origin) return;
     const data = event.data as { source?: string; type?: string; ratio?: number } | null;
     if (!data || data.source !== 'rf-preview' || data.type !== 'scroll' || typeof data.ratio !== 'number') return;
     const from = event.source;
     const target =
       from === leftRef.current?.contentWindow ? rightRef.current : from === rightRef.current?.contentWindow ? leftRef.current : null;
-    target?.contentWindow?.postMessage({ source: 'rf-studio', type: 'scroll-to', ratio: data.ratio }, PREVIEW_ORIGIN);
-  }, []);
+    target?.contentWindow?.postMessage({ source: 'rf-studio', type: 'scroll-to', ratio: data.ratio }, previewOrigin);
+  }, [previewOrigin]);
 
   useEffect(() => {
     window.addEventListener('message', onMessage);
@@ -258,7 +265,41 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
           ))}
         </div>
 
-        <span className="font-semibold text-slate-800 dark:text-slate-200">Optimised version</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={annotate}
+            onClick={() => setAnnotate((v) => !v)}
+            className="min-h-[36px] rounded-md border border-slate-200 dark:border-slate-700 px-2.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {annotate ? 'Hide tags' : 'Show tags'}
+          </button>
+          <button
+            type="button"
+            aria-pressed={staticCopy}
+            onClick={() => setStaticCopy((v) => !v)}
+            title="A copy without the store's scripts, for pages whose scripts change the layout"
+            className="min-h-[36px] rounded-md border border-slate-200 dark:border-slate-700 px-2.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {staticCopy ? 'Interactive copy' : 'Static copy'}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(previewUrl(auditId, 'optimised', previewOrigin));
+                setLinkCopied(true);
+                setTimeout(() => setLinkCopied(false), 2000);
+              } catch {
+                setLinkCopied(false);
+              }
+            }}
+            className="min-h-[36px] rounded-md bg-blue-600 px-2.5 font-medium text-white hover:bg-blue-700"
+          >
+            {linkCopied ? 'Link copied' : 'Copy preview link'}
+          </button>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">Optimised version</span>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
@@ -268,7 +309,7 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
           {ready && (
             <PreviewFrame
               title="Your current product page"
-              src={previewUrl(auditId, 'current')}
+              src={`${previewUrl(auditId, 'current', previewOrigin)}${staticCopy ? '?static=1' : ''}`}
               viewport={viewport}
               frameRef={leftRef as React.RefObject<HTMLIFrameElement>}
             />
@@ -279,7 +320,7 @@ export function StudioPreviewContainer({ auditId, status, stage, targetUrl, erro
           {ready ? (
             <PreviewFrame
               title="The optimised product page"
-              src={previewUrl(auditId, 'optimised')}
+              src={`${previewUrl(auditId, 'optimised', previewOrigin)}?v=${encodeURIComponent(optimisedVersion)}&annotate=${annotate ? 1 : 0}`}
               viewport={viewport}
               frameRef={rightRef as React.RefObject<HTMLIFrameElement>}
             />

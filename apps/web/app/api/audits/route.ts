@@ -7,6 +7,28 @@ import {
 import { validateTargetUrl } from '@rankforge/ssrf';
 import { getWebAuditStore } from '@/lib/audit-store';
 import { enqueueAuditTask } from '@/lib/task-queue';
+import { auditLimiter } from '@/lib/rate-limit';
+
+const CACHE_MAX_AGE_MS = 24 * 3600_000;
+const TERMINAL = new Set(['complete', 'failed', 'blocked']);
+
+/** Frees the concurrency slot once the audit reaches a final state, or after 20 minutes at the latest. */
+function releaseWhenFinished(auditId: string): void {
+  const started = Date.now();
+  const timer = setInterval(async () => {
+    try {
+      const audit = await getWebAuditStore().getAudit(auditId);
+      if ((audit && TERMINAL.has(audit.status)) || Date.now() - started > 20 * 60_000) {
+        auditLimiter.release(auditId);
+        clearInterval(timer);
+      }
+    } catch {
+      auditLimiter.release(auditId);
+      clearInterval(timer);
+    }
+  }, 10_000);
+  timer.unref?.();
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: errorPayload }, { status: 400 });
     }
 
-    const { url, keyword, imageConsent, userId } = parseResult.data;
+    const { url, keyword, imageConsent, userId, refresh } = parseResult.data;
 
     // SSRF Validation
     const ssrfResult = await validateTargetUrl(url);
@@ -38,9 +60,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: errorPayload }, { status: 400 });
     }
 
+    const store = getWebAuditStore();
+    if (!refresh) {
+      // A completed audit of the same page and keyword from the last 24 hours is reused (saves cost, and makes
+      // prepared showcase audits open instantly).
+      const cached = await store.findRecentComplete(url, keyword, CACHE_MAX_AGE_MS);
+      if (cached) {
+        return NextResponse.json(
+          AuditCreateResponseSchema.parse({ success: true, auditId: cached.auditId, status: 'complete', createdAt: cached.createdAt, cached: true }),
+          { status: 200 }
+        );
+      }
+    }
+
     const auditId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const store = getWebAuditStore();
+    const client = (req.headers.get('x-forwarded-for') ?? 'local').split(',')[0]?.trim() || 'local';
+    const decision = auditLimiter.tryAcquire(client, auditId);
+    if (!decision.allowed) {
+      const error = AuditErrorSchema.parse({
+        code: 'QuotaError',
+        message: decision.reason === 'busy' ? 'The studio is running several audits right now.' : 'You have started several audits in a short time.',
+        recoveryAction: `Wait about ${decision.retryAfterSeconds} seconds and try again.`,
+        timestamp: new Date().toISOString(),
+      });
+      return NextResponse.json({ success: false, error }, { status: 429, headers: { 'Retry-After': String(decision.retryAfterSeconds ?? 30) } });
+    }
 
     // Persist initial audit record
     await store.createAudit({
@@ -64,6 +109,7 @@ export async function POST(req: NextRequest) {
       totalCostInr: 0,
     });
 
+    releaseWhenFinished(auditId);
     // Enqueue task asynchronously (unawaited)
     enqueueAuditTask({
       auditId,

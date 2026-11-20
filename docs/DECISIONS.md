@@ -75,3 +75,17 @@ The supplied Gemini key is on the free tier: 20 requests per day per model, no q
 
 ### Consequences
 Quality is below the specification's intent where Pro-tier or NL API models were specified. With a billed key and a PageSpeed credential the same code uses them without changes (set `GEMINI_MODEL_PRO`, `PSI_API_KEY`).
+
+## ADR-004: Blueprint, rebuild and scoring choices (Phases 4 and 5)
+
+### Status
+Accepted (2026-11-20)
+
+### Decisions
+1. **The arbiter is code, not a model.** Its job is to enforce rules (traceability, anchors that exist, one section per type, limits) and to record decisions; a model would add cost and variance without adding checks. The structure advice stays a model call.
+2. **The model never applies patches.** It writes HTML for one section; code sanitises it, checks classes, builds the operation, verifies the selector and applies it.
+3. **Sample content counts toward the after score but is always shown separately** (spec 7.4): the score without it is stored in `report.json` and displayed.
+4. **Verification guards what the score cannot see:** a section is dropped if it pushes the mobile buy button below the fold, adds script errors, scrolls the page sideways or changes the pixels above it beyond the measured noise. Alternate placements are tried before a section is dropped.
+5. **Entity coverage and answered questions are measured by deterministic text matching** for both the before and after scores. The model supplies the order and quoted evidence for display only.
+6. **A static copy of the reproduction** (scripts removed) is stored with the interactive one for pages whose scripts change the layout; the studio offers it as a toggle.
+7. **Retry resumes** from artifacts already written, so a worker that dies mid-audit does not repeat paid steps.

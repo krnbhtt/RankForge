@@ -12,8 +12,9 @@ import type { StructureAdvice } from './structure.js';
 
 /** Which store component each section type is placed next to, in order of preference. */
 const ANCHOR_PREFERENCE: Record<SectionType, { kinds: string[]; fallbacks: string[]; position: Anchor['position'] }> = {
-  delivery_payment: { kinds: ['addToCart'], fallbacks: ['form[action*="cart" i]', 'h1'], position: 'insertAfter' },
-  trust_row: { kinds: ['price', 'addToCart'], fallbacks: ['h1'], position: 'insertAfter' },
+  delivery_payment: { kinds: ['addToCart'], fallbacks: ['form[action*="cart" i]'], position: 'insertAfter' },
+  // Placed after the buy button, never between the price and the button, so the button is not pushed down.
+  trust_row: { kinds: ['addToCart'], fallbacks: ['form[action*="cart" i]'], position: 'insertAfter' },
   price_clarity: { kinds: ['price'], fallbacks: ['h1'], position: 'insertAfter' },
   spec_table: { kinds: ['description', 'accordion'], fallbacks: ['main h2', 'main'], position: 'insertAfter' },
   sample_reviews: { kinds: ['reviews', 'description'], fallbacks: ['footer', 'main'], position: 'insertAfter' },
@@ -22,6 +23,32 @@ const ANCHOR_PREFERENCE: Record<SectionType, { kinds: string[]; fallbacks: strin
   description_depth: { kinds: ['description'], fallbacks: ['main'], position: 'insertAfter' },
   sticky_cta: { kinds: [], fallbacks: ['footer', 'main'], position: 'insertAfter' },
 };
+
+/** Section types that must never sit above the buy button; they get below-the-fold alternates. */
+const BELOW_FOLD_TYPES = new Set<SectionType>(['delivery_payment', 'trust_row', 'sample_reviews', 'faq', 'spec_table']);
+
+/**
+ * Places that are below the product block on almost any storefront: just before a footer-like element, or after the
+ * main content. Only selectors that match exactly one element on this page are offered.
+ */
+function belowFoldAlternates($: cheerio.CheerioAPI): { selector: string; position: Anchor['position'] }[] {
+  const candidates: [string, Anchor['position']][] = [
+    ['footer', 'insertBefore'],
+    ['[role="contentinfo"]', 'insertBefore'],
+    ['[id*="footer" i]', 'insertBefore'],
+    ['main', 'insertAfter'],
+    ['#MainContent', 'insertAfter'],
+  ];
+  const out: { selector: string; position: Anchor['position'] }[] = [];
+  for (const [selector, position] of candidates) {
+    try {
+      if ($(selector).length === 1) out.push({ selector, position });
+    } catch {
+      continue;
+    }
+  }
+  return out;
+}
 
 export interface ArbiterInput {
   auditId: string;
@@ -94,7 +121,11 @@ export function arbitrate(input: ArbiterInput): Blueprint {
   const chainTail = new Map<string, string>();
   for (const { planned } of kept) {
     const advice = adviceByType.get(planned.type);
-    const resolved = resolveAnchor($, planned.type, input.components);
+    const below = BELOW_FOLD_TYPES.has(planned.type) ? belowFoldAlternates($) : [];
+    let resolved = resolveAnchor($, planned.type, input.components);
+    if (!resolved && below[0]) {
+      resolved = { anchor: { selector: below[0].selector, position: below[0].position }, note: `no safe component anchor; placed at "${below[0].selector}"` };
+    }
     if (!resolved) {
       log.push({ decision: `Dropped "${planned.name}"`, reason: 'No place on the page could be found to insert it.' });
       continue;
@@ -103,7 +134,11 @@ export function arbitrate(input: ArbiterInput): Blueprint {
     // Sections that share an anchor are chained, so they appear in blueprint order instead of reversing.
     const anchorKey = `${resolved.anchor.selector}|${resolved.anchor.position}`;
     const previous = chainTail.get(anchorKey);
-    const anchor: Anchor = previous ? { ...resolved.anchor, selector: `[data-rf-section="${previous}"]` } : resolved.anchor;
+    const alternates = below.filter((a) => a.selector !== resolved.anchor.selector);
+    const anchor: Anchor = {
+      ...(previous ? { ...resolved.anchor, selector: `[data-rf-section="${previous}"]`, fallbackSelector: resolved.anchor.selector } : resolved.anchor),
+      ...(alternates?.length ? { alternates } : {}),
+    };
     chainTail.set(anchorKey, sectionId);
 
     const h2 = (advice?.h2 ?? planned.defaultH2).trim().slice(0, 100) || planned.defaultH2;

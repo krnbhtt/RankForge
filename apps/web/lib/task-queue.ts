@@ -1,6 +1,6 @@
-import type { RunAuditTaskInput } from '@rankforge/schema';
+import type { RunAuditTaskPayload } from '@rankforge/schema';
 
-export async function enqueueAuditTask(payload: RunAuditTaskInput): Promise<void> {
+export async function enqueueAuditTask(payload: RunAuditTaskPayload): Promise<void> {
   const workerUrl = process.env.WORKER_URL || 'http://localhost:4050';
   const tasksQueue = process.env.TASKS_QUEUE;
   const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.PROJECT_ID;

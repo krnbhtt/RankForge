@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { QuotaError, UpstreamModelError, SerpResultSchema, type SerpResult } from '@rankforge/schema';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { createHash } from 'node:crypto';
+import { findRepoRoot } from '@rankforge/storage';
 import { withRetry } from '../lib/retry.js';
 
 const SEARCH_API = 'https://www.searchapi.io/api/v1/search';
@@ -68,11 +72,52 @@ class HttpStatusError extends Error {
   }
 }
 
+const FRESH_MS = 24 * 3600_000;
+
+function cacheFile(keyword: string, gl: string, hl: string): string {
+  const dir = process.env.SERP_CACHE_DIR ?? path.join(findRepoRoot(), '.data', 'serp-cache');
+  const key = createHash('sha256').update(`${keyword.toLowerCase().trim()}|${gl}|${hl}`).digest('hex').slice(0, 24);
+  return path.join(dir, `${key}.json`);
+}
+
+function readCache(file: string): { savedAt: number; result: SerpResult } | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as { savedAt: number; result: unknown };
+    return { savedAt: parsed.savedAt, result: SerpResultSchema.parse(parsed.result) };
+  } catch {
+    return null;
+  }
+}
+
+/** Writes a SERP result into the cache (used on every successful fetch and to seed showcase keywords). */
+export function writeSerpCache(result: SerpResult, gl = 'in', hl = 'en'): void {
+  const file = cacheFile(result.keyword, gl, hl);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ savedAt: Date.now(), result }), 'utf8');
+}
+
 /**
  * SerpTool: top organic results (up to 15, so skipped competitors can be backfilled from ranks 11 to 15),
  * People Also Ask and related searches, through the SearchAPI.io Google engine.
  */
 export async function fetchSerp(options: SerpOptions): Promise<SerpResult> {
+  const gl = options.gl ?? 'in';
+  const hl = options.hl ?? 'en';
+  const file = cacheFile(options.keyword, gl, hl);
+  const cached = readCache(file);
+  if (cached && Date.now() - cached.savedAt < FRESH_MS) return cached.result;
+  try {
+    const fresh = await fetchSerpLive(options);
+    if (fresh.organic.length > 0) writeSerpCache(fresh, gl, hl);
+    return fresh;
+  } catch (err) {
+    // Quota or outage: a stale cached result is better than failing a live demo.
+    if (cached) return cached.result;
+    throw err;
+  }
+}
+
+async function fetchSerpLive(options: SerpOptions): Promise<SerpResult> {
   const merged = await fetchSerpPage(options, 1);
   const seenDomains = new Set(merged.organic.map((o) => o.domain));
   for (let page = 2; page <= 2 && merged.organic.length < 20; page++) {

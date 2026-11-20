@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phases 4 to 7 (blueprint, rebuild, studio, hardening)
+- Blueprint: deterministic CRO playbook, model structure advice with a playbook fallback, deterministic arbiter with traceability and anchor verification, below-the-fold alternates.
+- Rebuild: section writer, HTML sanitiser and class whitelist repair, patch applier (server mode and runtime MutationObserver mode), deterministic title, meta, alt text and structured data, verification (script errors, sideways scroll, pixels above insertion with measured noise, buy-button guard, alternate placements, click test), re-scoring with the same functions plus a score without Sample content, evidence attributions.
+- Worker job flow is now the real nine-stage pipeline; all Phase 0 mock stages and mock data are deleted.
+- Studio: annotation tags with pop-overs, progressive optimised preview, real Queries, Schema and Category panels, Sample marker, static-copy toggle, copy preview link, runtime preview origin.
+- Capture: static copy next to the interactive one, soft-block detection, entity clustering in the consensus model.
+- Hardening: rate limiter, 24-hour audit reuse, SERP cache with stale fallback, retry and resume, config fast-fail, esbuild bundles, Dockerfiles, `cloudbuild.yaml`, `docs/failures.md`.
+- Fixed: preview served the optimised page without stylesheets; a verification false positive from `vh`-based layouts; a UTF-8 corruption in the drawer.
+
 ### Added - Phase 2 (competitors) and Phase 3 (analysis)
 - `ai/gemini.ts`: schema-validated JSON calls (retry once with the error, then fail the stage), backoff with jitter, per-audit spend cap, a model fallback chain with cooldowns (the key has small per-model daily quotas), seeded calls.
 - Competitors: SERP client (SearchAPI.io, Google redirect links resolved, widened with related searches), AI-cited source discovery (degrades gracefully without grounding quota), parallel competitor capture (5 sessions, 25 s budget, skip and backfill), competitor profiles, deterministic consensus model, batched entity extraction, keyword resolution.

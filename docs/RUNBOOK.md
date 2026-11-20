@@ -190,3 +190,29 @@ pnpm run docs:api
 
 ### Non-Admin Symlink Errors with pnpm
 - If `pnpm install` throws symlink privilege errors (`EPERM` / `Administrator privilege required`), verify that `.npmrc` contains `node-linker=hoisted` and `package-import-method=hardlink`.
+
+
+## Environment variables (added in Phases 2 to 7)
+
+| Variable | Service | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | worker | Model calls. The worker refuses to run an audit without it. |
+| `SERP_API_KEY` | worker | SearchAPI.io. Optional if the SERP cache already has the keyword. |
+| `PSI_API_KEY` | worker | PageSpeed Insights credential. Without it, Core Web Vitals come from a local mobile measurement. |
+| `GEMINI_MODEL_FLASH`, `GEMINI_MODEL_PRO` | worker | Override the first model in each fallback chain. |
+| `SERP_CACHE_DIR` | worker | Where SERP results are cached (default `.data/serp-cache`). |
+| `ARTIFACT_DIR` / `BUCKET` | worker, web, preview | Local artifact folder, or the Cloud Storage bucket when set. |
+| `FIRESTORE_EMULATOR_HOST` / `AUDIT_STORE=firestore` | worker, web | Use Firestore instead of the file store. |
+| `PREVIEW_ORIGIN` | web | Origin of rf-preview, read at runtime through `/api/config`. |
+| `RATE_LIMIT_BURST`, `RATE_LIMIT_WINDOW_MS`, `MAX_CONCURRENT_AUDITS` | web | Limits on `POST /api/audits`. |
+
+## Operations
+
+- **Retry a stuck or failed audit:** `POST /api/audits/{id}/retry` (resumes from finished stages).
+- **Reuse:** an identical page and keyword within 24 hours returns the earlier audit; send `"refresh": true` to run again.
+- **Health:** `GET /healthz` on the worker also reports which keys and which audit store are configured.
+- **Local services:** do not use `tsx watch` for the worker while an audit runs.
+
+## Deploying (commands to review; none have been run)
+
+The build and deploy steps are in `cloudbuild.yaml` (one build step per image, one deploy step per service). The one-time setup commands are in section 8.2 of the specification. Before running anything: confirm the project id and region, create the secrets for the keys above, and expect the first deploy to take several minutes. On demo day set `--min-instances=1` on `rf-worker` and `rf-web` an hour before, then back to 0. Every command that creates or changes resources needs your explicit approval.

@@ -225,7 +225,3 @@ describe('Worker Tasks Route Defense-in-Depth (Remediation Items 2 & 4)', () => 
   });
 });
 
-describe('Phase 0 Deterministic Mock Progression', () => {
-
-
-});
