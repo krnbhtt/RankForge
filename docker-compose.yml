@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # RankForge Worker Service (Mode A - Docker Desktop with WSL2 backend)
+  rf-worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: rf-worker
+    restart: unless-stopped
+    ports:
+      - "4050:4050"
+    environment:
+      - PORT=4050
+      - NODE_ENV=development
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - STORAGE_EMULATOR_HOST=http://storage-emulator:9199
+      - GCLOUD_PROJECT=rankforge-dev
+      - GOOGLE_CLOUD_PROJECT=rankforge-dev
+    depends_on:
+      - firestore-emulator
+      - storage-emulator
+    networks:
+      - rankforge-net
+
+  # Google Cloud Firestore Emulator
+  firestore-emulator:
+    image: google/cloud-sdk:alpine
+    container_name: rf-firestore-emulator
+    restart: unless-stopped
+    command: gcloud beta emulators firestore start --host-port=0.0.0.0:8080
+    ports:
+      - "8080:8080"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=rankforge-dev
+    networks:
+      - rankforge-net
+
+  # Google Cloud Storage Emulator (Fake GCS Server)
+  storage-emulator:
+    image: fsouza/fake-gcs-server:latest
+    container_name: rf-storage-emulator
+    restart: unless-stopped
+    command: -scheme http -port 9199 -public-host localhost:9199
+    ports:
+      - "9199:9199"
+    networks:
+      - rankforge-net
+
+networks:
+  rankforge-net:
+    driver: bridge

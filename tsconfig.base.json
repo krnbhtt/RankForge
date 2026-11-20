@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "ignoreDeprecations": "6.0",
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "@rankforge/schema": ["./packages/schema/src/index.ts"],
+      "@rankforge/schema/*": ["./packages/schema/src/*"],
+      "@rankforge/scoring": ["./packages/scoring/src/index.ts"],
+      "@rankforge/scoring/*": ["./packages/scoring/src/*"],
+      "@rankforge/config": ["./packages/config/src/index.ts"],
+      "@rankforge/config/*": ["./packages/config/src/*"],
+      "@rankforge/skills": ["./packages/skills/src/index.ts"],
+      "@rankforge/skills/*": ["./packages/skills/src/*"]
+    }
+  }
+}

@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js build and outputs
+.next/
+out/
+dist/
+build/
+
+# Environment files
+.env*
+!.env.example
+
+# Playwright & Testing caches
+test-results/
+playwright-report/
+.playwright/
+blob-report/
+coverage/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cache and logs
+.turbo/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.data/
+

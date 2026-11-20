@@ -1,0 +1,12 @@
+# Enforce LF line endings across all platforms for Docker container mount parity
+* text=auto eol=lf
+
+# Explicitly enforce LF on shell scripts and Dockerfiles
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# Windows-specific scripts should preserve CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf

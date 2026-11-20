@@ -1,0 +1,36 @@
+{
+  "name": "@rankforge/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RankForge AI Headless Worker Service (Playwright, Crawler, Gemini Agents)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@google/genai": "^0.1.2",
+    "@rankforge/config": "workspace:*",
+    "@rankforge/schema": "workspace:*",
+    "@rankforge/scoring": "workspace:*",
+    "@rankforge/skills": "workspace:*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "playwright": "^1.48.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}
