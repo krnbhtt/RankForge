@@ -58,6 +58,32 @@ export function quoteAppearsInText(quote: string, pageText: string): boolean {
   return q.length >= 12 && norm(pageText).includes(q.slice(0, Math.min(q.length, 80)));
 }
 
+const QUESTION_STOPWORDS = new Set(['what', 'which', 'does', 'how', 'is', 'are', 'the', 'this', 'that', 'can', 'for', 'with', 'and', 'you', 'your', 'best', 'will', 'should', 'there', 'have', 'from', 'about', 'than', 'between', 'difference', 'much', 'many', 'does', 'come', 'comes']);
+const NON_ANSWER = /to be confirmed|seller will confirm|contact the seller|not specified/i;
+
+const stemWord = (w: string) => w.replace(/(ing|ed|es|s)$/i, '');
+
+/**
+ * Deterministic answer check shared by the before and after scores: a question counts as answered when one passage of
+ * the page (a sentence or block, at least 20 characters, not a "to be confirmed" placeholder) contains most of the
+ * question's meaningful words. The model's quote is shown to users but never changes the score.
+ */
+export function questionAnswered(query: string, pageText: string): boolean {
+  const tokens = [...new Set(norm(query).split(' ').filter((t) => t.length > 3 && !QUESTION_STOPWORDS.has(t)).map(stemWord))];
+  if (tokens.length < 2) return false;
+  const passages = pageText.split(/(?<=[.!?])\s+|[\n\r]+/).map((p) => p.trim()).filter((p) => p.length >= 20 && !p.endsWith('?') && !NON_ANSWER.test(p));
+  const need = Math.max(2, Math.ceil(tokens.length * 0.7));
+  return passages.some((p) => {
+    const text = norm(p);
+    return tokens.filter((t) => text.includes(t)).length >= need;
+  });
+}
+
+/** Consensus entities present on a page, by word match. Same function for before and after. */
+export function entitiesPresent(entities: { name: string }[], pageText: string): string[] {
+  return entities.filter((e) => entityAppearsInText(e.name, pageText)).map((e) => e.name);
+}
+
 /**
  * entity-query-gap skill (spec F4.1, F4.2): which consensus entities the page lacks, and which steps of the
  * shopper's question sequence it answers. The model judges; code verifies every claim against the page text.
@@ -91,16 +117,7 @@ export async function analyseEntityQueryGap(
     stage: 'analysis.entities',
   });
 
-  const known = new Map(consensusEntities.map((e) => [norm(e.name), e]));
-  const found = new Set<string>();
-  for (const claim of out.presentEntities) {
-    const entity = known.get(norm(claim));
-    if (entity && entityAppearsInText(entity.name, pageText)) found.add(entity.name);
-  }
-  // Single-word entities the model did not list may still literally appear on the page.
-  for (const e of consensusEntities) {
-    if (!found.has(e.name) && norm(e.name).split(' ').length === 1 && entityAppearsInText(e.name, pageText)) found.add(e.name);
-  }
+  const found = new Set(entitiesPresent(consensusEntities, pageText));
 
   const sourceOf = new Map(queries.map((q) => [norm(q.query), q.source]));
   // Only questions that came from the SERP count, so the score cannot move with invented questions.
@@ -108,7 +125,7 @@ export async function analyseEntityQueryGap(
   const querySequence: QuerySequenceStep[] = (knownQueries.length ? knownQueries : out.querySequence).map((q, i) => ({
     query: q.query,
     order: i + 1,
-    answered: q.answered && quoteAppearsInText(q.evidence, pageText),
+    answered: questionAnswered(q.query, pageText),
     evidence: q.evidence,
     source: sourceOf.get(norm(q.query)) ?? 'generated',
   }));

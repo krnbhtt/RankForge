@@ -48,3 +48,14 @@ declare module 'cors' {
   function cors(options?: any): RequestHandler;
   export default cors;
 }
+
+declare module 'pixelmatch' {
+  export default function pixelmatch(
+    img1: Uint8Array | Uint8ClampedArray,
+    img2: Uint8Array | Uint8ClampedArray,
+    output: Uint8Array | Uint8ClampedArray | null | undefined,
+    width: number,
+    height: number,
+    options?: { threshold?: number; includeAA?: boolean }
+  ): number;
+}

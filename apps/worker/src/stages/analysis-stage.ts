@@ -10,7 +10,7 @@ import {
   type Extraction,
   type ScoreCard,
 } from '@rankforge/schema';
-import { calculateConversionScore, calculatePPI, generateScoreCard, type ConversionInput } from '@rankforge/scoring';
+import { calculateConversionScore, calculatePPI, generateScoreCard, type ConversionInput, type VisibilityInput } from '@rankforge/scoring';
 import type { ArtifactStorage } from '@rankforge/storage';
 import { SpendTracker } from '../ai/gemini.js';
 import { analyseEntityQueryGap, type EntityGapResult } from '../analysis/entity-gap.js';
@@ -65,6 +65,48 @@ export function combineConversionRuns(
     breakdown[key] = Math.round(((first.breakdown[key] + second.breakdown[key]) / 2) * 10) / 10;
   }
   return { score: Math.round(((first.score + second.score) / 2) * 10) / 10, breakdown, averaged: true, runs };
+}
+
+/**
+ * Builds the score card from measured inputs. Used for the baseline and, unchanged, for the optimised page so the gain
+ * is measured, not estimated. A metric that could not be measured is left out and the rest rescaled, not scored as 0.
+ */
+export function composeScoreCard(
+  visibilityInput: VisibilityInput,
+  conversionInputs: ConversionInput[],
+  cwvMeasured: boolean,
+  baseline?: { visibility: number; conversion: number; ppi: number },
+  attributions: ScoreCard['attributions'] = []
+): { scoreCard: ScoreCard; combined: ReturnType<typeof combineConversionRuns>; unmeasured: string[] } {
+  const combined = combineConversionRuns(conversionInputs);
+  const scoreCard = generateScoreCard(visibilityInput, conversionInputs[0] as ConversionInput, baseline, attributions);
+  scoreCard.conversion = {
+    ...scoreCard.conversion,
+    current: combined.score,
+    delta: baseline ? Math.round((combined.score - baseline.conversion) * 10) / 10 : 0,
+    baseline: baseline ? baseline.conversion : combined.score,
+    breakdown: combined.breakdown,
+  };
+  const unmeasured: string[] = [];
+  if (!cwvMeasured) {
+    unmeasured.push('core_web_vitals');
+    const { core_web_vitals: _cwv, ...rest } = scoreCard.visibility.breakdown as Record<string, number>;
+    const earned = Object.values(rest).reduce((n, v) => n + v, 0);
+    const rescaled = Math.round((earned / 80) * 100 * 10) / 10;
+    scoreCard.visibility = {
+      ...scoreCard.visibility,
+      current: rescaled,
+      baseline: baseline ? baseline.visibility : rescaled,
+      delta: baseline ? Math.round((rescaled - baseline.visibility) * 10) / 10 : 0,
+    };
+  }
+  const ppi = calculatePPI(scoreCard.visibility.current, combined.score);
+  scoreCard.ppi = {
+    current: ppi,
+    baseline: baseline ? baseline.ppi : ppi,
+    delta: baseline ? Math.round((ppi - baseline.ppi) * 10) / 10 : 0,
+  };
+  return { scoreCard, combined, unmeasured };
 }
 
 async function loadScreenshot(storage: ArtifactStorage, key: string): Promise<Buffer | undefined> {
@@ -144,21 +186,7 @@ export async function runAnalysisStage(
   const conversionInputs = (visualRuns.length ? visualRuns.map((v) => v.rubric) : [undefined]).map((rubric) =>
     buildConversionInput(target, { cwv, trust }, rubric)
   );
-  const combined = combineConversionRuns(conversionInputs);
-
-  const scoreCard = generateScoreCard(visibilityInput, conversionInputs[0] as ConversionInput);
-  scoreCard.conversion = { ...scoreCard.conversion, current: combined.score, baseline: combined.score, delta: 0, breakdown: combined.breakdown };
-  // A metric that could not be measured is left out and the rest rescaled, instead of scoring it as zero.
-  const unmeasured: string[] = [];
-  if (!cwv) {
-    unmeasured.push('core_web_vitals');
-    const { core_web_vitals: _cwv, ...rest } = scoreCard.visibility.breakdown as Record<string, number>;
-    const earned = Object.values(rest).reduce((n, v) => n + v, 0);
-    const rescaled = Math.round(((earned / 80) * 100) * 10) / 10;
-    scoreCard.visibility = { ...scoreCard.visibility, current: rescaled, baseline: rescaled, delta: 0 };
-  }
-  const ppi = calculatePPI(scoreCard.visibility.current, combined.score);
-  scoreCard.ppi = { current: ppi, baseline: ppi, delta: 0 };
+  const { scoreCard, combined, unmeasured } = composeScoreCard(visibilityInput, conversionInputs, Boolean(cwv));
 
   const findings = buildFindings({
     auditId,

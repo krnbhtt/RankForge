@@ -12,7 +12,7 @@ export const LOW_CONFIDENCE_BELOW = 5;
 const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'of', 'a', 'an', 'in', 'to', 'your', 'our', 'made', 'free', 'high', 'quality']);
 
 function stem(word: string): string {
-  return word.replace(/(ing|ed|es|s)$/i, '').replace(/(.)$/, '$1');
+  return word.replace(/(ing|ed|es|s)$/i, '');
 }
 
 /**

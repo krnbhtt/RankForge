@@ -36,7 +36,10 @@ export function sanitizeAndValidateSection(html: string, whitelist: Iterable<str
     const attribs = (el as unknown as { attribs?: Record<string, string> }).attribs ?? {};
     for (const [name, value] of Object.entries(attribs)) {
       const lower = name.toLowerCase();
-      if (lower.startsWith('on')) {
+      if (lower === 'style') {
+        $(el).removeAttr(name);
+        strippedUnsafe++;
+      } else if (lower.startsWith('on')) {
         $(el).removeAttr(name);
         strippedUnsafe++;
       } else if (URL_ATTRS.includes(lower) && /^\s*(javascript|data|vbscript):/i.test(value) && !(lower === 'src' && /^\s*data:image\//i.test(value))) {

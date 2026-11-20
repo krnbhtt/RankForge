@@ -327,3 +327,21 @@ describe('runAnalysisStage', () => {
     expect(a.findings.map((f) => f.title)).toEqual(b.findings.map((f) => f.title));
   });
 });
+
+import { entitiesPresent, questionAnswered } from '../src/analysis/entity-gap.js';
+
+describe('deterministic answer and entity checks', () => {
+  const text =
+    'This ceramic mug is dishwasher safe and microwave safe for daily use. It holds 350 ml of coffee. Care: hand wash recommended for the glaze.';
+  it('counts a question as answered only when one passage covers its words', () => {
+    expect(questionAnswered('Is the ceramic mug dishwasher safe?', text)).toBe(true);
+    expect(questionAnswered('How much coffee does the mug hold?', text)).toBe(true);
+    expect(questionAnswered('Does the mug come with a lid and saucer?', text)).toBe(false);
+  });
+  it('ignores placeholder answers', () => {
+    expect(questionAnswered('Is the mug freezer safe for storage?', 'Is the mug freezer safe for storage? The seller will confirm this detail soon for you.')).toBe(false);
+  });
+  it('finds consensus entities by word match', () => {
+    expect(entitiesPresent([{ name: 'dishwasher safe' }, { name: 'lead free glaze' }], text)).toEqual(['dishwasher safe']);
+  });
+});

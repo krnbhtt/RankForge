@@ -35,6 +35,13 @@ export function finaliseOptimisedHtml(html: string): string {
   return /<\/body>/i.test(withStyle) ? withStyle.replace(/<\/body>/i, `${CLICK_FORWARD}</body>`) : withStyle + CLICK_FORWARD;
 }
 
+/** Applies operations to the snapshot in the chosen mode and adds RankForge's styles and helpers. */
+export function renderOptimised(snapshot: string, ops: PatchOp[], mode: 'server' | 'runtime'): { html: string; failed: ApplyFailure[]; applied: PatchOp[] } {
+  const result = applyPatchOps(snapshot, ops);
+  const html = mode === 'runtime' ? applyRuntimeMode(snapshot, ops) : result.html;
+  return { html: finaliseOptimisedHtml(html), failed: result.failed, applied: result.applied };
+}
+
 function toPatchDocs(auditId: string, ops: PatchOp[], failures: Map<PatchOp, string>): AuditPatch[] {
   const now = new Date().toISOString();
   return ops.map((op, i) => ({
@@ -87,12 +94,7 @@ export async function runRebuildStage(
   const failures = new Map<PatchOp, string>();
   const dropped: RebuildResult['dropped'] = [];
 
-  const render = (): { html: string; failed: ApplyFailure[]; applied: PatchOp[] } => {
-    const live = ops.filter((o) => !failures.has(o));
-    const result = applyPatchOps(snapshot, live);
-    const html = mode === 'runtime' ? applyRuntimeMode(snapshot, live) : result.html;
-    return { html: finaliseOptimisedHtml(html), failed: result.failed, applied: result.applied };
-  };
+  const render = () => renderOptimised(snapshot, ops.filter((o) => !failures.has(o)), mode);
   const persist = async (): Promise<PatchOp[]> => {
     const r = render();
     for (const f of r.failed) failures.set(f.op, f.reason);

@@ -4,11 +4,7 @@ import * as path from 'path';
 import express from 'express';
 import type { Server } from 'http';
 import { FileAuditStore, getAuditStore } from '../src/store/audit-store.js';
-import {
-  tasksRouter,
-  MOCK_BASELINE_SCORES,
-  MOCK_OPTIMIZED_SCORES,
-} from '../src/routes/tasks.js';
+import { tasksRouter } from '../src/routes/tasks.js';
 
 describe('Worker FileAuditStore', () => {
   const testDir = path.resolve(process.cwd(), '.data/test-audits');
@@ -230,27 +226,6 @@ describe('Worker Tasks Route Defense-in-Depth (Remediation Items 2 & 4)', () => 
 });
 
 describe('Phase 0 Deterministic Mock Progression', () => {
-  it('has baseline scores matching Spec (Visibility 42, Conversion 36, PPI 39)', () => {
-    expect(MOCK_BASELINE_SCORES.visibility.current).toBe(42);
-    expect(MOCK_BASELINE_SCORES.conversion.current).toBe(36);
-    expect(MOCK_BASELINE_SCORES.ppi.current).toBe(39);
-  });
 
-  it('has optimized scores matching Spec (Visibility 78, Conversion 81, PPI 79)', () => {
-    expect(MOCK_OPTIMIZED_SCORES.visibility.current).toBe(78);
-    expect(MOCK_OPTIMIZED_SCORES.conversion.current).toBe(81);
-    expect(MOCK_OPTIMIZED_SCORES.ppi.current).toBe(79);
 
-    // Uplifts
-    expect(MOCK_OPTIMIZED_SCORES.visibility.delta).toBe(36);
-    expect(MOCK_OPTIMIZED_SCORES.conversion.delta).toBe(45);
-    expect(MOCK_OPTIMIZED_SCORES.ppi.delta).toBe(40);
-  });
-
-  it('contains score attributions with Ranking and Conversion tags', () => {
-    expect(MOCK_OPTIMIZED_SCORES.attributions.length).toBeGreaterThanOrEqual(5);
-    const tags = MOCK_OPTIMIZED_SCORES.attributions.map((a) => a.category);
-    expect(tags).toContain('visibility');
-    expect(tags).toContain('conversion');
-  });
 });
