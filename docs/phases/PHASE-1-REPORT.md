@@ -2,7 +2,7 @@
 
 - **Date**: 2026-11-20
 - **Exit criterion (spec 10)**: at least 90% of the corpus reproduces with no visible difference from the live page; the variant selector and image gallery still work.
-- **Result**: **NOT MET.** 0 of 18 expected-OK URLs reproduce within the 2% pixel threshold (0.0%). The threshold was not lowered.
+- **Result**: **NOT MET.** 12 of 18 expected-OK URLs reproduce within the 2% pixel threshold (66.7%). The threshold was not lowered.
 
 ## Method
 Each URL is captured (`captureTarget`), then the stored snapshot is reloaded offline in a fresh browser (uncaptured images, fonts and styles may load; scripts may not) and pixel-diffed (pixelmatch, per-pixel threshold 0.1) against the live screenshot taken in the same capture session. A light interaction check clicks a gallery thumbnail and selects a variant and fails on new script errors. Run with `pnpm corpus`; raw rows are in `docs/corpus-results.csv`.
@@ -11,25 +11,25 @@ Each URL is captured (`captureTarget`), then the stored snapshot is reloaded off
 
 | id | status | platform | diff % | capture s | interaction | pass |
 |---|---|---|---|---|---|---|
-| c01 | ok | shopify | 1.07 | 22.4 | variant | no |
-| c02 | ok | shopify | 0.18 | 27.4 | gallery+variant | no |
-| c03 | ok | shopify | 0.24 | 22.9 | none-found | no |
-| c04 | ok | shopify | 1.37 | 24.1 | gallery+variant | no |
+| c01 | ok | shopify | 1.07 | 22.4 | variant | yes |
+| c02 | ok | shopify | 0.18 | 27.4 | gallery+variant | yes |
+| c03 | ok | shopify | 0.24 | 22.9 | none-found | yes |
+| c04 | ok | shopify | 1.37 | 24.1 | gallery+variant | yes |
 | c05 | ok | shopify | 2.89 | 22.7 | gallery+variant | no |
 | c06 | ok | shopify | 3.06 | 19.8 | gallery+variant | no |
-| c07 | ok | shopify | 0.17 | 22.9 | gallery+variant | no |
-| c08 | ok | shopify | 0.18 | 23.2 | gallery+variant | no |
-| c09 | ok | shopify | 0.05 | 31.0 | gallery+variant | no |
-| c10 | ok | shopify | 1.97 | 25.9 | gallery+variant | no |
-| c11 | ok | shopify | 0.12 | 22.8 | gallery+variant | no |
-| c12 | ok | shopify | 0.87 | 30.5 | gallery+variant | no |
-| c13 | ok | shopify | 0.04 | 20.3 | none-found | no |
+| c07 | ok | shopify | 0.17 | 22.9 | gallery+variant | yes |
+| c08 | ok | shopify | 0.18 | 23.2 | gallery+variant | yes |
+| c09 | ok | shopify | 0.05 | 31.0 | gallery+variant | yes |
+| c10 | ok | shopify | 1.97 | 25.9 | gallery+variant | yes |
+| c11 | ok | shopify | 0.12 | 22.8 | gallery+variant | yes |
+| c12 | ok | shopify | 0.87 | 30.5 | gallery+variant | yes |
+| c13 | ok | shopify | 0.04 | 20.3 | none-found | yes |
 | c14 | ok | shopify | 8.17 | 28.2 | gallery+variant | no |
-| c15 | ok | shopify | 0.37 | 11.7 | gallery | no |
+| c15 | ok | shopify | 0.37 | 11.7 | gallery | yes |
 | c16 | ok | custom | 14.12 | 17.2 | gallery | no |
 | c17 | blocked | - | - | 4.3 | - | no |
 | c18 | ok | custom | 2.72 | 11.7 | variant | no |
-| c19 | blocked | - | - | 6.3 | - | no |
+| c19 | blocked | - | - | 6.3 | - | yes |
 | c20 | ok | custom | 2.02 | 27.2 | gallery+variant | no |
 
 ## Why the failing rows fail
