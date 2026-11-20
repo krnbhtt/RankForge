@@ -6,7 +6,15 @@ import { createHash } from 'node:crypto';
 import { findRepoRoot } from '@rankforge/storage';
 import { withRetry } from '../lib/retry.js';
 
-const SEARCH_API = 'https://www.searchapi.io/api/v1/search';
+/**
+ * Two search providers return the same Google result shape: SearchAPI.io (default) and SerpApi.
+ * `SERP_PROVIDER=serpapi` selects SerpApi. The API key is always read from SERP_API_KEY.
+ */
+type SerpProvider = 'searchapi' | 'serpapi';
+
+function provider(): SerpProvider {
+  return process.env.SERP_PROVIDER === 'serpapi' ? 'serpapi' : 'searchapi';
+}
 
 const RawSerpSchema = z.object({
   organic_results: z
@@ -20,7 +28,8 @@ const RawSerpSchema = z.object({
       })
     )
     .default([]),
-  related_questions: z.array(z.object({ question: z.string().optional(), answer: z.string().optional() })).default([]),
+  related_questions: z.array(z.object({ question: z.string().optional(), answer: z.string().optional(), snippet: z.string().optional() })).default([]),
+  error: z.string().optional(),
   related_searches: z.array(z.object({ query: z.string().optional() })).default([]),
 });
 
@@ -149,20 +158,26 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
   const apiKey = options.apiKey ?? process.env.SERP_API_KEY;
   if (!apiKey) throw new UpstreamModelError('Search data is not configured.', { reason: 'missing SERP_API_KEY' });
   const doFetch = options.fetchImpl ?? fetch;
-  const url = new URL(SEARCH_API);
+  const isSerpApi = provider() === 'serpapi';
+  const url = new URL(isSerpApi ? 'https://serpapi.com/search.json' : 'https://www.searchapi.io/api/v1/search');
   url.searchParams.set('engine', 'google');
   url.searchParams.set('q', options.keyword);
   url.searchParams.set('num', '15');
   url.searchParams.set('gl', options.gl ?? 'in');
   url.searchParams.set('hl', options.hl ?? 'en');
-  if (page > 1) url.searchParams.set('page', String(page));
+  if (isSerpApi) {
+    url.searchParams.set('api_key', apiKey);
+    if (page > 1) url.searchParams.set('start', String((page - 1) * 15));
+  } else if (page > 1) {
+    url.searchParams.set('page', String(page));
+  }
 
   let json: unknown;
   try {
     json = await withRetry(
       async () => {
         const res = await doFetch(url, {
-          headers: { authorization: `Bearer ${apiKey}` },
+          headers: isSerpApi ? {} : { authorization: `Bearer ${apiKey}` },
           signal: AbortSignal.timeout(20_000),
         });
         if (res.status === 429 || res.status >= 500) throw new HttpStatusError(res.status);
@@ -171,7 +186,14 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
         }
         if (res.status === 402) throw new QuotaError('The search data credits are used up.', { status: 402, service: 'serp' });
         if (!res.ok) throw new UpstreamModelError(`The search data service failed (HTTP ${res.status}).`);
-        return (await res.json()) as unknown;
+        const body = (await res.json()) as { error?: string };
+        if (body.error && /run out of searches|out of searches|plan limit|quota/i.test(body.error)) {
+          throw new QuotaError('The search data credits are used up.', { status: 429, service: 'serp' });
+        }
+        if (body.error && !/hasn't returned any results|no results/i.test(body.error)) {
+          throw new UpstreamModelError('The search data service reported a problem.', { reason: body.error });
+        }
+        return body as unknown;
       },
       {
         retries: 3,
@@ -231,7 +253,7 @@ async function fetchSerpPage(options: SerpOptions, page: number): Promise<SerpRe
     organic,
     peopleAlsoAsk: raw.related_questions
       .filter((q) => q.question)
-      .map((q) => ({ question: q.question as string, answer: q.answer })),
+      .map((q) => ({ question: q.question as string, answer: q.answer ?? q.snippet })),
     relatedSearches: raw.related_searches.map((s) => s.query).filter((q): q is string => Boolean(q)),
   });
 }
@@ -243,12 +265,20 @@ export interface SerpCredits {
   ok: boolean;
 }
 
-/** Reads the SERP account balance. The account endpoint is free, so this never spends credits. */
+/** Reads the SERP account balance. The account endpoints are free, so this never spends credits. */
 export async function fetchSerpCredits(options: { apiKey?: string; fetchImpl?: typeof fetch } = {}): Promise<SerpCredits> {
   const apiKey = options.apiKey ?? process.env.SERP_API_KEY;
   if (!apiKey) return { configured: false, remainingSearches: null, ok: false };
+  const doFetch = options.fetchImpl ?? fetch;
   try {
-    const res = await (options.fetchImpl ?? fetch)('https://www.searchapi.io/api/v1/me', {
+    if (provider() === 'serpapi') {
+      const res = await doFetch(`https://serpapi.com/account.json?api_key=${encodeURIComponent(apiKey)}`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return { configured: true, remainingSearches: null, ok: true };
+      const json = (await res.json()) as { total_searches_left?: number; plan_searches_left?: number };
+      const left = json.total_searches_left ?? json.plan_searches_left;
+      return { configured: true, remainingSearches: typeof left === 'number' ? left : null, ok: typeof left === 'number' ? left > 0 : true };
+    }
+    const res = await doFetch('https://www.searchapi.io/api/v1/me', {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(5000),
     });

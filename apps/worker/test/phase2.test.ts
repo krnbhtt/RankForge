@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockedSiteError, type Extraction, type GroundingResult, type SerpResult } from '@rankforge/schema';
 import { MODELS, SpendTracker, generateJson, resetModelCooldowns, z } from '../src/ai/gemini.js';
@@ -105,6 +108,29 @@ describe('fetchSerp', () => {
   it('maps HTTP 402 to QuotaError and 401 to UpstreamModelError', async () => {
     await expect(fetchSerp({ keyword: 'x', apiKey: 'k', fetchImpl: (async () => json({}, 402)) as never })).rejects.toMatchObject({ code: 'QuotaError' });
     await expect(fetchSerp({ keyword: 'x', apiKey: 'k', fetchImpl: (async () => json({}, 401)) as never })).rejects.toMatchObject({ code: 'UpstreamModelError' });
+  });
+
+  it('talks to SerpApi when selected: key in the query, start offset for page two, snippet as the PAA answer, quota from the error text', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-serpapi-'));
+    vi.stubEnv('SERP_PROVIDER', 'serpapi');
+    vi.stubEnv('SERP_CACHE_DIR', dir);
+    try {
+      const urls: string[] = [];
+      const fetchImpl = vi.fn(async (u: unknown) => {
+        urls.push(String(u));
+        return json(String(u).includes('start=') ? { organic_results: [] } : { organic_results: [{ position: 1, title: 'A', link: 'https://a.example.org/p/1' }], related_questions: [{ question: 'Q?', snippet: 'Because.' }] });
+      });
+      const serp = await fetchSerp({ keyword: 'serpapi shape check', apiKey: 'secret-key', fetchImpl: fetchImpl as never });
+      expect(urls[0]).toContain('https://serpapi.com/search.json');
+      expect(urls[0]).toContain('api_key=secret-key');
+      expect(urls.some((u) => u.includes('start=15'))).toBe(true);
+      expect(serp.peopleAlsoAsk[0]?.answer).toBe('Because.');
+      const out = async () => json({ error: 'Your account has run out of searches.' });
+      await expect(fetchSerp({ keyword: 'serpapi quota check', apiKey: 'k', fetchImpl: out as never })).rejects.toMatchObject({ code: 'QuotaError' });
+    } finally {
+      vi.unstubAllEnvs();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

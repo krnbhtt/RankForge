@@ -49,7 +49,7 @@ steps:
       - --max-instances=10
       - --no-allow-unauthenticated
       - --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,SERP_API_KEY=SERP_API_KEY:latest
-      - --set-env-vars=BUCKET=$PROJECT_ID-artifacts,AUDIT_STORE=firestore,GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+      - --set-env-vars=BUCKET=$PROJECT_ID-artifacts,AUDIT_STORE=firestore,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,SERP_PROVIDER=serpapi
 
   - id: deploy-preview
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
