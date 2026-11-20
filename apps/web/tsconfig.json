@@ -23,9 +23,10 @@
       "@/*": ["./*"],
       "@rankforge/schema": ["../../packages/schema/src/index.ts"],
       "@rankforge/scoring": ["../../packages/scoring/src/index.ts"],
-      "@rankforge/config": ["../../packages/config/src/index.ts"]
+      "@rankforge/config": ["../../packages/config/src/index.ts"],
+      "@rankforge/ssrf": ["../../packages/ssrf/src/index.ts"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../../types/**/*", "../../packages/*/src/**/*"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../../packages/*/src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

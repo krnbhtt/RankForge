@@ -4,7 +4,7 @@ import {
   AuditCreateResponseSchema,
   AuditErrorSchema,
 } from '@rankforge/schema';
-import { validateTargetUrl } from '@/lib/ssrf';
+import { validateTargetUrl } from '@rankforge/ssrf';
 import { getWebAuditStore } from '@/lib/audit-store';
 import { enqueueAuditTask } from '@/lib/task-queue';
 

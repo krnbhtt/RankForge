@@ -11,7 +11,7 @@ import {
   type ScoreCard,
 } from '@rankforge/schema';
 import { getAuditStore } from '../store/audit-store.js';
-import { validateTargetUrl } from '../lib/ssrf.js';
+import { validateTargetUrl } from '@rankforge/ssrf';
 
 export const tasksRouter = Router();
 

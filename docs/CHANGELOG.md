@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 1 / T1: shared SSRF guard (`packages/ssrf`)
+- New `@rankforge/ssrf` package replaces the duplicated copies in `apps/web/lib` and `apps/worker/src/lib`.
+- `validateTargetUrl` now checks every address a hostname resolves to, rejects URL credentials, and fails closed on DNS errors (the `example.com` / `.test` exemption is removed).
+- `safeFetch` follows redirects manually and re-validates every hop; resolver and fetch are injectable for tests.
+- Removed the hand-written `types/node.d.ts` and `types/react.d.ts` shims now that real type packages are installed.
+
 ### Fixed - 2026-11-20 (fix: Section 9.4 Prompt 3 Remediation - Security Hardening & UI/UX Polish)
 - Security Remediation — SSRF IPv4-Mapped IPv6 Bypass (`apps/web/lib/ssrf.ts` & `apps/worker/src/lib/ssrf.ts`):
   - In `isPrivateIp`: implemented RFC 4291 §2.5.5.2 IPv4-mapped IPv6 (`::ffff:0:0/96`), RFC 6052 NAT64 (`64:ff9b::/96`), and RFC 3056 6to4 (`2002::/16`) extraction and evaluation against private/loopback/cloud-metadata checks.

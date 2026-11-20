@@ -5,6 +5,7 @@ const nextConfig = {
     '@rankforge/schema',
     '@rankforge/scoring',
     '@rankforge/config',
+    '@rankforge/ssrf',
   ],
   output: 'standalone',
 };

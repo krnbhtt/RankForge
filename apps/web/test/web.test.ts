@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { validateTargetUrl, isPrivateIp } from '../lib/ssrf.js';
+import { validateTargetUrl, isPrivateIp } from '@rankforge/ssrf';
 import { WebAuditStore } from '../lib/audit-store.js';
 
 describe('Web SSRF Validation (Spec R2 & §4.2)', () => {
   it('allows valid public e-commerce URLs', async () => {
-    const valid = await validateTargetUrl('https://example.com/products/ceramic-dripper');
+    const valid = await validateTargetUrl('https://example.com/products/ceramic-dripper', { resolver: async () => ['93.184.216.34'] });
     expect(valid.isValid).toBe(true);
     expect(valid.error).toBeUndefined();
   });

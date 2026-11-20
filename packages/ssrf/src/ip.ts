@@ -1,11 +1,3 @@
-import * as dns from 'dns';
-
-export interface SsrfValidationResult {
-  isValid: boolean;
-  error?: string;
-  resolvedIp?: string;
-}
-
 /**
  * Parses any standard IPv6 address (including compressed '::', IPv4-mapped, NAT64, 6to4)
  * into an array of 8 16-bit numbers. Returns null if invalid.
@@ -219,72 +211,4 @@ export function isPrivateIp(ip: string): boolean {
   if (w0 === 0x2001 && w1 === 0x0db8) return true;
 
   return false;
-}
-
-export async function validateTargetUrl(rawUrl: string): Promise<SsrfValidationResult> {
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(rawUrl);
-  } catch {
-    return { isValid: false, error: 'Malformed URL. Please provide a valid HTTP or HTTPS URL.' };
-  }
-
-  // Must be http or https
-  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-    return {
-      isValid: false,
-      error: `Invalid protocol '${parsedUrl.protocol}'. Only HTTP and HTTPS are permitted.`,
-    };
-  }
-
-  const hostname = parsedUrl.hostname.toLowerCase();
-
-  // Blocked known hostnames
-  if (
-    hostname === 'localhost' ||
-    hostname === 'metadata.google.internal' ||
-    hostname === 'metadata' ||
-    hostname === 'instance-data' ||
-    hostname.endsWith('.localhost') ||
-    hostname.endsWith('.local') ||
-    hostname.endsWith('.internal')
-  ) {
-    return {
-      isValid: false,
-      error: `Internal or private hostnames (${hostname}) are prohibited for security reasons.`,
-    };
-  }
-
-  // Check if hostname is already a raw IP (IPv4 or IPv6 with or without brackets)
-  if (isPrivateIp(hostname)) {
-    return {
-      isValid: false,
-      error: `Private or loopback IP addresses (${hostname}) are prohibited.`,
-    };
-  }
-
-  // Resolve hostname via DNS
-  try {
-    const lookupResult = await dns.promises.lookup(hostname);
-    if (isPrivateIp(lookupResult.address)) {
-      return {
-        isValid: false,
-        error: `Hostname ${hostname} resolves to private IP ${lookupResult.address}, which is prohibited.`,
-      };
-    }
-    return { isValid: true, resolvedIp: lookupResult.address };
-  } catch (err) {
-    // If DNS resolution fails in local/offline test environment for example.com and test domains
-    if (
-      hostname === 'example.com' ||
-      hostname.endsWith('.example.com') ||
-      hostname.endsWith('.test')
-    ) {
-      return { isValid: true, resolvedIp: '93.184.216.34' };
-    }
-    return {
-      isValid: false,
-      error: `Failed to resolve domain name '${hostname}': ${(err as Error).message}`,
-    };
-  }
 }
