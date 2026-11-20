@@ -7,10 +7,10 @@ export async function enqueueAuditTask(payload: RunAuditTaskInput): Promise<void
 
   if (tasksQueue && projectId) {
     try {
-      // Production Cloud Tasks Enqueue with 900s deadline & OIDC
       // Dynamic import to avoid missing module crash in offline environments
+      const tasksPackage = '@google-cloud/tasks';
       // @ts-ignore
-      const { CloudTasksClient } = await import('@google-cloud/tasks');
+      const { CloudTasksClient } = await import(/* webpackIgnore: true */ tasksPackage);
       const client = new CloudTasksClient();
       const location = process.env.TASKS_LOCATION || 'asia-south1';
       const parent = client.queuePath(projectId, location, tasksQueue);
