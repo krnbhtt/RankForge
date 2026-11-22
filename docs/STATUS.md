@@ -2,7 +2,9 @@
 
 **Last updated**: 2026-11-20. Phases follow section 10 of the specification.
 
-## Current position: the whole pipeline runs for real; deployment and rehearsal are not done
+## Current position: deployed and live on Cloud Run (project rankforge-ai-demo, asia-south1); full audits complete in the cloud
+
+Live: https://rf-web-gbltmnqhla-el.a.run.app. Search provider is SerpApi (`SERP_PROVIDER=serpapi`). Billing is on a personal account after the event credits account closed; services run with one warm instance each (set back to 0 after the demo). Latest cloud audit: score 37.9 to 43.7 including Sample content.
 
 | Phase | State | Exit criterion | Result |
 |---|---|---|---|

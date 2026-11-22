@@ -117,3 +117,6 @@ This document tracks known issues, technical risks, environment limitations, and
 
 ### 21. The Workspace has no sign-in
 - It lists every store on this installation. Google sign-in needs a Firebase project.
+
+### 22. Google front end can return 503 for a while after a billing change
+- When the event credits account closed, Cloud Run stopped serving. After linking a new billing account, asia-south1 kept returning 503 for about an hour although the containers were healthy. A hello-world service in us-central1 worked meanwhile. Services stay on min-instances=1 for demos; reset to 0 afterwards.

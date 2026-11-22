@@ -1,11 +1,11 @@
 id,url,status,errorCode,reproducedS,scoresS,firstSectionS,completeS,budgetsMet,ppiBefore,ppiAfter,ppiAfterWithoutSample,costInr,note
-u01,https://www.taylorstitch.com/products/straight-jean-in-rinsed-nep-hemp-selvedge-2611,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u02,https://shop.beardbrand.com/products/cologne-and-deodorant-set,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u03,https://www.vahdam.com/products/halloween-tea-assortment-9-teas,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u04,https://www.nativecos.com/products/last-chance-body-scrub,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u05,https://www.stanley1913.com/products/stanley-1913-x-paris-saint-germain-iceflow-flip-straw-tumbler-24-oz,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u06,https://www.cuyana.com/products/nova-bag-croco-v1,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u07,https://ridgewallet.com/products/ridge-wallet-new-york-yankees,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u08,https://www.cotopaxi.com/products/contiguo-encima-fleece-pullover-dark-mode-mens,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u09,https://www.parachutehome.com/products/gwp-fingertip-mosaic-towel-set-multi,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
-u10,https://www.mvmt.com/products/odyssey-ii-carnation-gold-25mm-28000352,not_run (credits),QuotaError,,,,,,,,,,The search credits for today are used up (the search service reports none left).
+u01,https://www.taylorstitch.com/products/straight-jean-in-rinsed-nep-hemp-selvedge-2611,complete,,27.4,200.9,214.2,308.7,missed: reproducedS scoresS firstSectionS completeS,8.9,22.7,21.4,3.47,
+u02,https://shop.beardbrand.com/products/cologne-and-deodorant-set,complete,,22.4,170.2,179.5,254.3,missed: reproducedS scoresS firstSectionS completeS,19,21.1,19.4,4.38,
+u03,https://www.vahdam.com/products/halloween-tea-assortment-9-teas,complete,,25.6,191.5,199.9,280.8,missed: reproducedS scoresS firstSectionS completeS,14.3,16.5,14.9,3.25,
+u04,https://www.nativecos.com/products/last-chance-body-scrub,failed,InternalError,,,,,missed: reproducedS scoresS firstSectionS completeS,,,,0,"The object rankforge-ai-demo-artifacts/7df504d3-9e16-415a-9a45-b8654204abe5/target/assets/dcecab1355b5c2b9ecef.gif exceeded the rate limit for object mutation operations (create, update, and delete). Please reduce your request rate. See https://cloud.google.com/storage/docs/gcs429."
+u05,https://www.stanley1913.com/products/stanley-1913-x-paris-saint-germain-iceflow-flip-straw-tumbler-24-oz,complete,,32.6,178.6,188.3,260.5,missed: reproducedS scoresS firstSectionS completeS,13.9,26.4,25.1,4.04,
+u06,https://www.cuyana.com/products/nova-bag-croco-v1,complete,,27.1,169.3,175.5,238.3,missed: reproducedS scoresS firstSectionS,23.3,22.4,22.4,3.17,
+u07,https://ridgewallet.com/products/ridge-wallet-new-york-yankees,complete,,50.4,223.8,236.1,347.2,missed: reproducedS scoresS firstSectionS completeS,18.1,31.5,29.8,2.52,
+u08,https://www.cotopaxi.com/products/contiguo-encima-fleece-pullover-dark-mode-mens,complete,,42.5,145.6,155.3,251.9,missed: reproducedS scoresS firstSectionS completeS,21.8,11.4,11.4,2.48,
+u09,https://www.parachutehome.com/products/gwp-fingertip-mosaic-towel-set-multi,complete,,39.1,146.6,155.9,288.5,missed: reproducedS scoresS firstSectionS completeS,11.3,21.8,21.8,4.17,
+u10,https://www.mvmt.com/products/odyssey-ii-carnation-gold-25mm-28000352,not_run,QuotaError,,,,,,,,,,

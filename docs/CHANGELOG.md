@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - deployment
+- Deployed rf-web, rf-worker, rf-preview to Cloud Run (asia-south1) with Firestore, Cloud Storage, Cloud Tasks and Secret Manager; SerpApi provider support; signed worker calls from the web app; the Cloud Tasks client shipped whole in the web image.
+
 ### Added - gap closure
 - Credits exception: Start-page notice and studio problem card when search or AI credits are used up, `GET /internal/quota` (never spends credits), prepared examples from earlier real runs, retry button, `pnpm exam` exits with code 2 and writes `not_run (credits)`.
 - Image studio (consent-gated, labelled Sample), Workspace screen (stores grouped by hostname, no sign-in yet), Summary and Plan tabs in the studio, scroll-to-first-change in the optimised preview.
